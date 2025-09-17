@@ -43,6 +43,7 @@ public class ImageManager {
             HERO_BULLET_IMAGE = ImageIO.read(new FileInputStream("src/images/bullet_hero.png"));
             ENEMY_BULLET_IMAGE = ImageIO.read(new FileInputStream("src/images/bullet_enemy.png"));
 
+            // 类名.class 获取类的Class对象
             CLASSNAME_IMAGE_MAP.put(HeroAircraft.class.getName(), HERO_IMAGE);
             CLASSNAME_IMAGE_MAP.put(MobEnemy.class.getName(), MOB_ENEMY_IMAGE);
             CLASSNAME_IMAGE_MAP.put(HeroBullet.class.getName(), HERO_BULLET_IMAGE);
@@ -62,6 +63,7 @@ public class ImageManager {
         if (obj == null){
             return null;
         }
+        // 获取obj实际的class对象，即运行时创建的具体对象
         return get(obj.getClass().getName());
     }
 
