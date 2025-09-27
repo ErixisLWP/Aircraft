@@ -1,0 +1,61 @@
+@startuml
+'https://plantuml.com/class-diagram
+interface EnemyCreator{
+    + {abstract} createEnemy():Enemy
+}
+
+class MobEnemyCreator{
+    - speedX:int
+    - speedY:int
+    - hp:int
+    + createEnemy():Enemy
+}
+
+class EliteEnemyCreator{
+    - speedX:int
+    - speedY:int
+    - hp:int
+    + createEnemy():Enemy
+}
+
+EnemyCreator <|.. MobEnemyCreator
+EnemyCreator <|.. EliteEnemyCreator
+
+class Enemy {
+    - score:int
+    + Enemy(int locationX, int locationY, int speedX, int speedY, int hp)
+    + forward():void
+    + getScore():int
+    + setScore(int score):void
+    + dropProp(List<BaseProp props, int locationX, int locationY):void
+}
+
+class MobEnemy {
+    + MobEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
+    + forward():void
+    + shoot():List<BaseBullet>
+    + dropProp():void
+}
+
+MobEnemy <.. MobEnemyCreator
+
+class EliteEnemy {
+    - shootNum:int
+    - power:int
+    - direction:int
+    - bulletSpeedX:int
+    - bulletSpeedY:int
+    - {static} propRate:double
+    + EliteEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
+    + shoot():List<BaseBullet>
+    + dropProp():void
+    + getPropRate():double
+}
+
+EliteEnemy <.. EliteEnemyCreator
+
+Enemy <|-- MobEnemy
+Enemy <|-- EliteEnemy
+
+
+@enduml

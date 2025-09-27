@@ -2,6 +2,7 @@ package edu.hitsz.aircraft;
 
 import edu.hitsz.application.Main;
 import edu.hitsz.bullet.BaseBullet;
+import edu.hitsz.prop.BaseProp;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -16,6 +17,7 @@ public class MobEnemy extends Enemy {
 
     public MobEnemy(int locationX, int locationY, int speedX, int speedY, int hp) {
         super(locationX, locationY, speedX, speedY, hp);
+        setScore(10);
     }
 
 //    @Override
@@ -30,6 +32,11 @@ public class MobEnemy extends Enemy {
     @Override
     public List<BaseBullet> shoot() {
         return new LinkedList<>();
+    }
+
+    @Override
+    public void dropProp(List<BaseProp> props, int locationX, int locationY) {
+        return;
     }
 
 }

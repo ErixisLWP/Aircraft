@@ -1,14 +1,25 @@
 package edu.hitsz.prop;
 
-public class BloodProp extends BaseProp {
-    private int healingHP;
+import edu.hitsz.aircraft.HeroAircraft;
 
-    public BloodProp(int locationX, int locationY, int speedX, int speedY, int healingHP) {
+public class BloodProp extends BaseProp {
+    private int healingHP = 30;
+
+    public BloodProp(int locationX, int locationY, int speedX, int speedY) {
         super(locationX, locationY, speedX, speedY);
-        this.healingHP = healingHP;
     }
 
     public int getHealingHP() {
         return healingHP;
+    }
+
+    private void heal(HeroAircraft heroAircraft) {
+        heroAircraft.increaseHp(healingHP);
+    }
+
+    @Override
+    public void takeEffect(HeroAircraft heroAircraft) {
+        heal(heroAircraft);
+        this.vanish();
     }
 }

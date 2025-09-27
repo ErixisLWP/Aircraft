@@ -1,0 +1,65 @@
+@startuml
+
+interface PropCreator{
+    + {abstract} createProp(int locationX, int locationY):BaseProp
+}
+
+class BloodPropCreator{
+    - speedX:int
+    - speedY:int
+    + createProp(int locationX, int locationY):BaseProp
+}
+
+class BombPropCreator{
+    - speedX:int
+    - speedY:int
+    + createProp(int locationX, int locationY):BaseProp
+}
+
+class BulletPropCreator{
+    - speedX:int
+    - speedY:int
+    + createProp(int locationX, int locationY):BaseProp
+}
+
+PropCreator <|.. BloodPropCreator
+PropCreator <|.. BombPropCreator
+PropCreator <|.. BulletPropCreator
+
+class BaseProp {
+    + BaseProp(int locationX, int locationY, int speedX, int speedY)
+    + forward():void
+    + takeEffect(HeroAircraft heroAircraft):void
+}
+
+class BloodProp {
+    - healingHP:int
+    + BloodProp(int locationX, int locationY, int speedX, int speedY, int healingHP)
+    + getHealingHP():int
+    - heal(HeroAircraft heroAircraft):void
+    + takeEffect(HeroAircraft heroAircraft):void
+}
+
+BloodProp <.. BloodPropCreator
+
+class BombProp {
+    + BombProp(int locationX, int locationY, int speedX, int speedY, int healingHP)
+    - boom(HeroAircraft heroAircraft):void
+    + takeEffect(HeroAircraft heroAircraft):void
+}
+
+BombProp <.. BombPropCreator
+
+class BulletProp {
+    + BulletProp(int locationX, int locationY, int speedX, int speedY, int healingHP)
+    - fireSupply(HeroAircraft heroAircraft):void
+    + takeEffect(HeroAircraft heroAircraft):void
+}
+
+BulletProp <.. BulletPropCreator
+
+BaseProp <|-- BloodProp
+BaseProp <|-- BombProp
+BaseProp <|-- BulletProp
+
+@enduml
