@@ -24,7 +24,7 @@ public class HeroAircraft extends AbstractAircraft {
     /**
      * 子弹伤害
      */
-    private int power = 30;
+    private int power = 100;
 
     /**
      * 子弹射击方向 (向上发射：-1，向下发射：1)

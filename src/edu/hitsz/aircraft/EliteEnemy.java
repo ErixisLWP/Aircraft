@@ -58,14 +58,14 @@ public class EliteEnemy extends Enemy{
             // 随机数判定道具种类
             double randomNum2 = Math.random();
             if (randomNum2 < 1 / 3.0d) {
-                BloodPropCreator bloodPropCreator = new BloodPropCreator();
-                props.add(bloodPropCreator.createProp(locationX, locationY));
+                propCreator = new BloodPropCreator();
+                props.add(propCreator.createProp(locationX, locationY));
             }else if (randomNum2 < 2 / 3.0d) {
-                BombPropCreator bombPropCreator = new BombPropCreator();
-                props.add(bombPropCreator.createProp(locationX, locationY));
+                propCreator = new BombPropCreator();
+                props.add(propCreator.createProp(locationX, locationY));
             } else {
-                BulletPropCreator bulletPropCreator = new BulletPropCreator();
-                props.add(bulletPropCreator.createProp(locationX, locationY));
+                propCreator = new BulletPropCreator();
+                props.add(propCreator.createProp(locationX, locationY));
             }
         }
         return;

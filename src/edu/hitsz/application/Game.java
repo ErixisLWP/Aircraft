@@ -54,6 +54,23 @@ public class Game extends JPanel {
     private float eliteEnemyProbability = 0.2f;
 
     /**
+     * 精英敌机升级版刷新概率
+     */
+    private float elitePlusEnemyProbability = 0.05f;
+
+    /**
+     *  boss敌机刷新阈值，每bossThreshold分出现一只boss
+     *  若不需要boss敌机，可设置一个很大的值
+     */
+    private int bossThreshold = 500;
+
+    /**
+     * bossThreshold / 1000大于bossAppearCount时，产生一只boss，bossAppearCount加1
+     * 用于控制boss敌机的产生
+     */
+    private int bossAppearCount = 0;
+
+    /**
      * 当前得分
      */
     private int score = 0;
@@ -75,11 +92,13 @@ public class Game extends JPanel {
     private boolean gameOverFlag = false;
 
     // 各个工厂
-    EnemyCreator mobEnemyCreator = new MobEnemyCreator();
-    EnemyCreator eliteEnemyCreator = new EliteEnemyCreator();
-    PropCreator bloodPropCreator = new BloodPropCreator();
-    PropCreator bombPropCreator = new BombPropCreator();
-    PropCreator bulletPropCreator = new BulletPropCreator();
+//    EnemyCreator mobEnemyCreator = new MobEnemyCreator();
+//    EnemyCreator eliteEnemyCreator = new EliteEnemyCreator();
+    public EnemyCreator enemyCreator;
+//    PropCreator bloodPropCreator = new BloodPropCreator();
+//    PropCreator bombPropCreator = new BombPropCreator();
+//    PropCreator bulletPropCreator = new BulletPropCreator();
+//    public PropCreator propCreator;
 
 
     public Game() {
@@ -166,12 +185,24 @@ public class Game extends JPanel {
 
     private void CreateNewEnemy() {
         if (enemyAircrafts.size() < enemyMaxNumber) {
-            if (Math.random() < eliteEnemyProbability) {
-                enemyAircrafts.add(eliteEnemyCreator.createEnemy());
+            if (Math.random() < elitePlusEnemyProbability) {
+                enemyCreator = new ElitePlusEnemyCreator();
+                enemyAircrafts.add(enemyCreator.createEnemy());
+            }
+            else if (Math.random() < eliteEnemyProbability + elitePlusEnemyProbability) {
+                enemyCreator = new EliteEnemyCreator();
+                enemyAircrafts.add(enemyCreator.createEnemy());
             }
             else {
-                enemyAircrafts.add(mobEnemyCreator.createEnemy());
+                enemyCreator = new MobEnemyCreator();
+                enemyAircrafts.add(enemyCreator.createEnemy());
             }
+        }
+        // boss敌机产生
+        if (score / bossThreshold > bossAppearCount) {
+            enemyCreator = new BossEnemyCreator();
+            enemyAircrafts.add(enemyCreator.createEnemy());
+            bossAppearCount++;
         }
     }
 
@@ -189,7 +220,7 @@ public class Game extends JPanel {
     private void shootAction() {
         // TODO 敌机射击
         for (AbstractAircraft enemy : enemyAircrafts) {
-            if (enemy instanceof EliteEnemy) {
+            if (!(enemy instanceof MobEnemy)) {
                 enemyBullets.addAll(enemy.shoot());
             }
         }
