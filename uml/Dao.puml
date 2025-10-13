@@ -1,0 +1,48 @@
+@startuml
+
+class Player {
+    - rank: int
+    - score: int
+    - name: String
+    - recordTime: Date
+    + Player(String name, int score, LocalDateTime recordTime)
+    + getRank(): int
+    + getScore(): int
+    + getName(): String
+    + getRecordTime(): LocalDateTime
+    + setRank(int rank): void
+    + setScore(int score): void
+    + setName(String name): void
+    + setRecordTime(Date record_time): void
+}
+
+interface PlayerDao {
+    + getAllPlayers(): List<Player>
+    + getPlayerByName(String name): Player
+    + addPlayer(Player player): void
+    + updatePlayer(Player player): void
+    + deletePlayerByName(String name): void
+}
+
+Player <-- PlayerDao
+
+class PlayerDaoImpl {
+    - players: List<Player>
+    - DATA_FILE: String
+    + PlayerDaoImpl()
+    - LoadPlayersFromFile(): void
+    - SavePlayersToFile(): void
+    + getAllPlayers(): List<Player>
+    + getPlayerByName(String name): Player
+    + addPlayer(Player player): void
+    + updatePlayer(Player player): void
+    + deletePlayerByName(String name): void
+}
+
+PlayerDao <|.. PlayerDaoImpl
+
+Class Game{}
+
+PlayerDao <.. Game
+
+@enduml

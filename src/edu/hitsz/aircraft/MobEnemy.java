@@ -18,20 +18,8 @@ public class MobEnemy extends Enemy {
     public MobEnemy(int locationX, int locationY, int speedX, int speedY, int hp) {
         super(locationX, locationY, speedX, speedY, hp);
         setScore(10);
-    }
-
-//    @Override
-//    public void forward() {
-//        super.forward();
-//        // 判定 y 轴向下飞行出界
-//        if (locationY >= Main.WINDOW_HEIGHT ) {
-//            vanish();
-//        }
-//    }
-
-    @Override
-    public List<BaseBullet> shoot() {
-        return new LinkedList<>();
+        setPower(0);
+        setBulletSpeed(0);
     }
 
     @Override

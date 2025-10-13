@@ -1,7 +1,7 @@
 package edu.hitsz.application;
 
 
-import edu.hitsz.BossEnemy;
+import edu.hitsz.aircraft.BossEnemy;
 import edu.hitsz.aircraft.ElitePlusEnemy;
 import edu.hitsz.aircraft.HeroAircraft;
 import edu.hitsz.aircraft.MobEnemy;
@@ -10,10 +10,10 @@ import edu.hitsz.bullet.EnemyBullet;
 import edu.hitsz.bullet.HeroBullet;
 import edu.hitsz.prop.BloodProp;
 import edu.hitsz.prop.BombProp;
+import edu.hitsz.prop.BulletPlusProp;
 import edu.hitsz.prop.BulletProp;
 
 import javax.imageio.ImageIO;
-import javax.swing.plaf.basic.BasicLabelUI;
 import java.awt.image.BufferedImage;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -45,6 +45,7 @@ public class ImageManager {
     public static BufferedImage PROP_BLOOD_IMAGE;
     public static BufferedImage PROP_BOMB_IMAGE;
     public static BufferedImage PROP_BULLET_IMAGE;
+    public static BufferedImage PROP_BULLETPLUS_IMAGE;
 
     static {
         try {
@@ -61,6 +62,7 @@ public class ImageManager {
             PROP_BLOOD_IMAGE =  ImageIO.read(new FileInputStream("src/images/prop_blood.png"));
             PROP_BOMB_IMAGE =   ImageIO.read(new FileInputStream("src/images/prop_bomb.png"));
             PROP_BULLET_IMAGE = ImageIO.read(new FileInputStream("src/images/prop_bullet.png"));
+            PROP_BULLETPLUS_IMAGE = ImageIO.read(new FileInputStream("src/images/prop_bulletPlus.png"));
 
             // 类名.class 获取类的Class对象
             CLASSNAME_IMAGE_MAP.put(HeroAircraft.class.getName(), HERO_IMAGE);
@@ -73,6 +75,7 @@ public class ImageManager {
             CLASSNAME_IMAGE_MAP.put(BloodProp.class.getName(), PROP_BLOOD_IMAGE);
             CLASSNAME_IMAGE_MAP.put(BombProp.class.getName(), PROP_BOMB_IMAGE);
             CLASSNAME_IMAGE_MAP.put(BulletProp.class.getName(), PROP_BULLET_IMAGE);
+            CLASSNAME_IMAGE_MAP.put(BulletPlusProp.class.getName(), PROP_BULLETPLUS_IMAGE);
 
         } catch (IOException e) {
             e.printStackTrace();

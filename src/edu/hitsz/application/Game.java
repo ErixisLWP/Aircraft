@@ -4,16 +4,22 @@ import edu.hitsz.Factories.*;
 import edu.hitsz.aircraft.*;
 import edu.hitsz.bullet.BaseBullet;
 import edu.hitsz.basic.AbstractFlyingObject;
+import edu.hitsz.dao.Player;
+import edu.hitsz.dao.PlayerDao;
+import edu.hitsz.dao.PlayerDaoImpl;
 import edu.hitsz.prop.BaseProp;
 import edu.hitsz.prop.BloodProp;
 import edu.hitsz.prop.BombProp;
 import edu.hitsz.prop.BulletProp;
+import edu.hitsz.strategy.NormalShootStrategy;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.Console;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.*;
@@ -103,6 +109,7 @@ public class Game extends JPanel {
 
     public Game() {
         heroAircraft = HeroAircraft.getInstance();
+        heroAircraft.setShootStrategy(new NormalShootStrategy());
 
         enemyAircrafts = new LinkedList<>();
         heroBullets = new LinkedList<>();
@@ -166,6 +173,23 @@ public class Game extends JPanel {
                 executorService.shutdown();
                 gameOverFlag = true;
                 System.out.println("Game Over!");
+
+                try {
+                    // 创建PlayerDao实例
+                    PlayerDao playerDao = new PlayerDaoImpl();
+
+                    // 创建Player对象（ID设为0，rank暂时设为0，后续计算）
+                    Player currentPlayer = new Player("testUserName", score, LocalDateTime.now());
+
+                    // 添加玩家记录
+                    playerDao.addPlayer(currentPlayer);
+
+                    // 打印排行榜（按分数从高到低）
+                    printScoreRanking(playerDao);
+
+                } catch (Exception e) {
+                    System.err.println("记录分数时出错: " + e.getMessage());
+                }
             }
 
         };
@@ -176,6 +200,39 @@ public class Game extends JPanel {
          */
         executorService.scheduleWithFixedDelay(task, timeInterval, timeInterval, TimeUnit.MILLISECONDS);
 
+    }
+
+    /**
+     * 打印得分排行榜
+     */
+    private void printScoreRanking(PlayerDao playerDao) {
+        System.out.println("\n======================= 得分排行榜 =======================");
+
+        // 获取所有玩家记录
+        List<Player> allPlayers = playerDao.getAllPlayers();
+
+        // 按分数从高到低排序
+        allPlayers.sort((p1, p2) -> Integer.compare(p2.getScore(), p1.getScore()));
+
+        // 更新排名并打印
+        System.out.printf("%-6s%-8s%-16s%-24s%n", "排名", "分数", "玩家名", "时间");
+        System.out.println("--------------------------------------------------------");
+
+        for (int i = 0; i < allPlayers.size(); i++) {
+            Player player = allPlayers.get(i);
+            player.setRank(i + 1); // 设置实际排名
+
+            // 格式化时间输出
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String formattedTime = player.getRecordTime().format(formatter);
+
+            System.out.printf("%-6d%-8d%-16s%-24s%n",
+                    player.getRank(),
+                    player.getScore(),
+                    player.getName(),
+                    formattedTime);
+        }
+        System.out.println("========================================================\n");
     }
 
 

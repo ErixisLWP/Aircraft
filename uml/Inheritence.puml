@@ -29,23 +29,33 @@ abstract class AbstractAircraft
 {
 	# maxHp:int
     # hp:int
+    # shootNum:int
+    # power:int
+    # bulletSpeed:int
+    # direction:int
+    # shootStrategy:ShootStrategy
     + AbstractAircraft(int locationX, int locationY, int speedX, int speedY, int hp)
     + increaseHp(int increase):void
     + decreaseHp(int decrease):void
     + getHp():int
-    + {abstract} shoot():List<BaseBullet>
+    + getShootNum():int
+    + setShootNum(int shootNum):void
+    + getPower():int
+    + setPower(int power):void
+    + getBulletSpeed():int
+    + setBulletSpeed(int bulletSpeed):void
+    + getDirection():int
+    + setDirection(int direction):void
+    + setShootStrategy(ShootStrategy shootStrategy):void
+    + shoot():List<BaseBullet>
  }
 
 
 class HeroAircraft {
-    - shootNum:int
-    - power:int
-    - direction:int
     - {static} instance:HeroAircraft
     - HeroAircraft(int locationX, int locationY, int speedX, int speedY, int hp)
     + {static} getInstance(int locationX, int locationY, int speedX, int speedY, int hp):HeroAircraft
     + forward():void
-    + shoot():List<BaseBullet>
 }
 
 Client --> HeroAircraft : getInstance()
@@ -53,6 +63,7 @@ HeroAircraft <-- HeroAircraft : -instance
 
 class Enemy {
     - score:int
+    # propCreator:PropCreator
     + Enemy(int locationX, int locationY, int speedX, int speedY, int hp)
     + forward():void
     + getScore():int
@@ -62,26 +73,32 @@ class Enemy {
 
 class MobEnemy {
     + MobEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
-    + forward():void
-    + shoot():List<BaseBullet>
-    + dropProp():void
+    + dropProp(List<BaseProp> props, int locationX, int locationY):void
 }
 
 class EliteEnemy {
-    - shootNum:int
-    - power:int
-    - direction:int
-    - bulletSpeedX:int
-    - bulletSpeedY:int
+    - propRate:double
     - {static} propRate:double
     + EliteEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
-    + shoot():List<BaseBullet>
-    + dropProp():void
+    + dropProp(List<BaseProp> props, int locationX, int locationY):void
     + getPropRate():double
+}
+
+class ElitePlusEnemy {
+    - propRate:double
+    + ElitePlusEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
+    + dropProp(List<BaseProp> props, int locationX, int locationY):void
+}
+
+class BossEnemy {
+    + BossEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
+    + dropProp(List<BaseProp> props, int locationX, int locationY):void
 }
 
 Enemy <|-- MobEnemy
 Enemy <|-- EliteEnemy
+Enemy <|-- ElitePlusEnemy
+Enemy <|-- BossEnemy
 
 AbstractAircraft <|-- HeroAircraft
 AbstractAircraft <|-- Enemy
@@ -133,9 +150,16 @@ class BulletProp {
     + takeEffect(HeroAircraft heroAircraft):void
 }
 
+class BulletPlusProp {
+    + BulletPlusProp(int locationX, int locationY, int speedX, int speedY)
+    - firePlusSupply(HeroAircraft heroAircraft):void
+    + takeEffect(HeroAircraft heroAircraft):void
+}
+
 BaseProp <|-- BloodProp
 BaseProp <|-- BombProp
 BaseProp <|-- BulletProp
+BaseProp <|-- BulletPlusProp
 
 AbstractFlyingObject <|-- AbstractAircraft
 AbstractFlyingObject <|-- BaseBullet
@@ -149,7 +173,7 @@ class MobEnemyCreator {
     - speedX:int
     - speedY:int
     - hp:int
-    + createEnemy():MobEnemy
+    + createEnemy():Enemy
 }
 
 MobEnemy <.. MobEnemyCreator
@@ -158,13 +182,33 @@ class EliteEnemyCreator {
     - speedX:int
     - speedY:int
     - hp:int
-    + createEnemy():EliteEnemy
+    + createEnemy():Enemy
 }
 
 EliteEnemy <.. EliteEnemyCreator
 
+class ElitePlusEnemyCreator {
+    - speedX:int
+    - speedY:int
+    - hp:int
+    + createEnemy():Enemy
+}
+
+ElitePlusEnemy <.. ElitePlusEnemyCreator
+
+class BossEnemyCreator {
+    - speedX:int
+    - speedY:int
+    - hp:int
+    + createEnemy():Enemy
+}
+
+BossEnemy <.. BossEnemyCreator
+
 EnemyCreator <|.. MobEnemyCreator
 EnemyCreator <|.. EliteEnemyCreator
+EnemyCreator <|.. ElitePlusEnemyCreator
+EnemyCreator <|.. BossEnemyCreator
 
 interface PropCreator {
     + createProp(int locationX, int locationY):BaseProp
@@ -194,8 +238,17 @@ class BulletPropCreator {
 
 BulletProp <.. BulletPropCreator
 
+class BulletPlusPropCreator {
+    - speedX:int
+    - speedY:int
+    + createProp(int locationX, int locationY):BulletPlusProp
+}
+
+BulletPlusPropCreator <.. BulletPlusPropCreator
+
 PropCreator <|.. BloodPropCreator
 PropCreator <|.. BombPropCreator
 PropCreator <|.. BulletPropCreator
+PropCreator <|.. BulletPlusPropCreator
 
 @enduml

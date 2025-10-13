@@ -16,33 +16,13 @@ import java.util.LinkedList;
  */
 public class EliteEnemy extends Enemy{
 
-    private int shootNum = 1;
-
-    private int power = 1;
-
-    private int direction = 1;
-
-    private int bulletSpeedX = 0;
-    private int bulletSpeedY = 10;
-
     private static double propRate = 0.75;
 
     public EliteEnemy(int locationX, int locationY, int speedX, int speedY, int hp) {
         super(locationX, locationY, speedX, speedY, hp);
         setScore(20);
-    }
-
-    @Override
-    public List<BaseBullet> shoot() {
-        List<BaseBullet> res = new LinkedList<>();
-        int x = this.getLocationX();
-        int y = this.getLocationY() + direction * 2;
-        BaseBullet bullet;
-        for(int i=0; i<shootNum; i++){
-            bullet = new EnemyBullet(x + (i*2 - shootNum + 1)*10, y, bulletSpeedX, bulletSpeedY, power);
-            res.add(bullet);
-        }
-        return res;
+        setPower(1);
+        setShootNum(1);
     }
 
     /**
@@ -57,10 +37,10 @@ public class EliteEnemy extends Enemy{
         if (randomNum1 < propRate) {
             // 随机数判定道具种类
             double randomNum2 = Math.random();
-            if (randomNum2 < 1 / 3.0d) {
+            if (randomNum2 < 1 / 2.0d) {
                 propCreator = new BloodPropCreator();
                 props.add(propCreator.createProp(locationX, locationY));
-            }else if (randomNum2 < 2 / 3.0d) {
+            }else if (randomNum2 < 3 / 4.0d) {
                 propCreator = new BombPropCreator();
                 props.add(propCreator.createProp(locationX, locationY));
             } else {

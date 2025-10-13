@@ -1,10 +1,11 @@
 package edu.hitsz.Factories;
 
-import edu.hitsz.BossEnemy;
-import edu.hitsz.aircraft.EliteEnemy;
+import edu.hitsz.aircraft.BossEnemy;
 import edu.hitsz.aircraft.Enemy;
 import edu.hitsz.application.ImageManager;
 import edu.hitsz.application.Main;
+import edu.hitsz.strategy.CircleShootStrategy;
+import edu.hitsz.strategy.ShootStrategy;
 
 public class BossEnemyCreator implements EnemyCreator{
 
@@ -14,7 +15,10 @@ public class BossEnemyCreator implements EnemyCreator{
 
     @Override
     public Enemy createEnemy() {
-        return new BossEnemy((int) (Math.random() * (Main.WINDOW_WIDTH - ImageManager.BOSS_ENEMY_IMAGE.getWidth())),
+        ShootStrategy shootStrategy = new CircleShootStrategy();
+        Enemy bossEnemy = new BossEnemy((int) (Math.random() * (Main.WINDOW_WIDTH - ImageManager.BOSS_ENEMY_IMAGE.getWidth())),
                 (int) (Math.random() * Main.WINDOW_HEIGHT * 0.05), speedX, speedY, hp);
+        bossEnemy.setShootStrategy(shootStrategy);
+        return bossEnemy;
     }
 }

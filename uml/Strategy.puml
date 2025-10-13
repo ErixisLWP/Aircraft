@@ -1,0 +1,59 @@
+@startuml
+
+interface ShootStrategy {
+    + {abstract} shoot(AbstractAircraft aircraft):List<BaseBullet>
+}
+
+class NoShootStrategy {
+    + shoot(AbstractAircraft aircraft):List<BaseBullet>
+}
+
+class NormalShootStrategy {
+    + shoot(AbstractAircraft aircraft):List<BaseBullet>
+}
+
+class FanShootStrategy {
+    + shoot(AbstractAircraft aircraft):List<BaseBullet>
+}
+
+class CircleShootStrategy {
+    + shoot(AbstractAircraft aircraft):List<BaseBullet>
+}
+
+ShootStrategy <|.. NoShootStrategy
+ShootStrategy <|.. NormalShootStrategy
+ShootStrategy <|.. FanShootStrategy
+ShootStrategy <|.. CircleShootStrategy
+
+abstract class AbstractAircraft
+{
+	# maxHp:int
+    # hp:int
+    # shootNum:int
+    # power:int
+    # bulletSpeed:int
+    # direction:int
+    # shootStrategy:ShootStrategy
+    + AbstractAircraft(int locationX, int locationY, int speedX, int speedY, int hp)
+    + increaseHp(int increase):void
+    + decreaseHp(int decrease):void
+    + getHp():int
+    + getShootNum():int
+    + setShootNum(int shootNum):void
+    + getPower():int
+    + setPower(int power):void
+    + getBulletSpeed():int
+    + setBulletSpeed(int bulletSpeed):void
+    + getDirection():int
+    + setDirection(int direction):void
+    + setShootStrategy(ShootStrategy shootStrategy):void
+    + shoot():List<BaseBullet>
+ }
+
+ ShootStrategy <--o AbstractAircraft : shootStrategy
+
+ class 各个工厂类 {}
+
+ AbstractAircraft <.. 各个工厂类
+
+@enduml
