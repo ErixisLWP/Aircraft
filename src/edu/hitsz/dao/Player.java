@@ -5,9 +5,9 @@ import java.time.LocalDateTime;
 import java.util.Date;
 
 public class Player implements Serializable {
+    private int rank;
     private String name;
     private int score;
-    private int rank;
     private LocalDateTime recordTime;
 
     public Player(String name, int score, LocalDateTime recordTime) {

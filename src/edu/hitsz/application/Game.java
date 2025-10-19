@@ -7,17 +7,16 @@ import edu.hitsz.basic.AbstractFlyingObject;
 import edu.hitsz.dao.Player;
 import edu.hitsz.dao.PlayerDao;
 import edu.hitsz.dao.PlayerDaoImpl;
+import edu.hitsz.frame.Ranking;
 import edu.hitsz.prop.BaseProp;
-import edu.hitsz.prop.BloodProp;
-import edu.hitsz.prop.BombProp;
-import edu.hitsz.prop.BulletProp;
 import edu.hitsz.strategy.NormalShootStrategy;
+import edu.hitsz.strategy.ShootStrategy;
+import edu.hitsz.thread.MusicThread;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.Console;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -30,6 +29,10 @@ import java.util.concurrent.*;
  * @author hitsz
  */
 public class Game extends JPanel {
+
+    public enum GameMode {SIMPLE, NORMAL, HARD};
+
+    public static GameMode gameMode;
 
     private int backGroundTop = 0;
 
@@ -71,7 +74,7 @@ public class Game extends JPanel {
     private int bossThreshold = 500;
 
     /**
-     * bossThreshold / 1000大于bossAppearCount时，产生一只boss，bossAppearCount加1
+     * score / bossThreshold 大于bossAppearCount时，产生一只boss，bossAppearCount加1
      * 用于控制boss敌机的产生
      */
     private int bossAppearCount = 0;
@@ -134,6 +137,9 @@ public class Game extends JPanel {
      */
     public void action() {
 
+        // bgm线程
+        AudioManager.playBgm();
+
         // 定时任务：绘制、对象产生、碰撞判定、击毁及结束判定
         Runnable task = () -> {
 
@@ -147,6 +153,8 @@ public class Game extends JPanel {
                 CreateNewEnemy();
                 // 飞机射出子弹
                 shootAction();
+                // 检测道具剩余时间
+                checkPropDuration();
             }
 
             // 子弹移动
@@ -174,22 +182,11 @@ public class Game extends JPanel {
                 gameOverFlag = true;
                 System.out.println("Game Over!");
 
-                try {
-                    // 创建PlayerDao实例
-                    PlayerDao playerDao = new PlayerDaoImpl();
+                // 游戏结束音效
+                AudioManager.playGameOverSound();
 
-                    // 创建Player对象（ID设为0，rank暂时设为0，后续计算）
-                    Player currentPlayer = new Player("testUserName", score, LocalDateTime.now());
-
-                    // 添加玩家记录
-                    playerDao.addPlayer(currentPlayer);
-
-                    // 打印排行榜（按分数从高到低）
-                    printScoreRanking(playerDao);
-
-                } catch (Exception e) {
-                    System.err.println("记录分数时出错: " + e.getMessage());
-                }
+                // 游戏结束窗口
+                GameOverDialog();
             }
 
         };
@@ -203,6 +200,48 @@ public class Game extends JPanel {
     }
 
     /**
+     * 游戏结束窗口，可保存成绩、删除成绩、查看排行榜
+     */
+    private void GameOverDialog() {
+        try {
+            // 创建PlayerDao实例
+            PlayerDao playerDao = new PlayerDaoImpl();
+
+            // 创建Ranking窗口
+            JFrame frame = new JFrame("Ranking");
+            // 设置窗口大小为屏幕的x%
+            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+            int width = (int) (screenSize.width * 0.6);
+            int height = (int) (screenSize.height * 0.9);
+            frame.setSize(width, height);
+            frame.setLocationRelativeTo(null);
+            Ranking rankingFrame = new Ranking();
+            frame.setContentPane(rankingFrame.getMainPanel());
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//            frame.pack();
+            frame.setVisible(true);
+
+            // 创建保存成绩窗口
+            String name = JOptionPane.showInputDialog("游戏结束！你的得分为" + score + "。是否输入昵称保存？");
+
+            if (name != null) {
+                // 创建Player对象（ID设为0，rank暂时设为0，后续计算）
+                Player currentPlayer = new Player(name, score, LocalDateTime.now());
+                // 添加玩家记录
+                playerDao.addPlayer(currentPlayer);
+                // 更新当前窗口
+                rankingFrame.updateTable();
+            }
+
+            // 打印排行榜（按分数从高到低）
+            printScoreRanking(playerDao);
+
+        } catch (Exception e) {
+            System.err.println("记录分数时出错: " + e.getMessage());
+        }
+    }
+
+    /**
      * 打印得分排行榜
      */
     private void printScoreRanking(PlayerDao playerDao) {
@@ -211,22 +250,22 @@ public class Game extends JPanel {
         // 获取所有玩家记录
         List<Player> allPlayers = playerDao.getAllPlayers();
 
-        // 按分数从高到低排序
-        allPlayers.sort((p1, p2) -> Integer.compare(p2.getScore(), p1.getScore()));
+        // 按分数从高到低排序（已排序）
+        // allPlayers.sort((p1, p2) -> Integer.compare(p2.getScore(), p1.getScore()));
 
         // 更新排名并打印
-        System.out.printf("%-6s%-8s%-16s%-24s%n", "排名", "分数", "玩家名", "时间");
+        System.out.printf("%-6s%-8s%-40s%-24s%n", "排名", "分数", "玩家名", "时间");
         System.out.println("--------------------------------------------------------");
 
         for (int i = 0; i < allPlayers.size(); i++) {
             Player player = allPlayers.get(i);
-            player.setRank(i + 1); // 设置实际排名
+//            player.setRank(i + 1); // 设置实际排名
 
             // 格式化时间输出
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             String formattedTime = player.getRecordTime().format(formatter);
 
-            System.out.printf("%-6d%-8d%-16s%-24s%n",
+            System.out.printf("%-6d%-8d%-40s%-24s%n",
                     player.getRank(),
                     player.getScore(),
                     player.getName(),
@@ -234,7 +273,6 @@ public class Game extends JPanel {
         }
         System.out.println("========================================================\n");
     }
-
 
     //***********************
     //      Action 各部分
@@ -257,6 +295,8 @@ public class Game extends JPanel {
         }
         // boss敌机产生
         if (score / bossThreshold > bossAppearCount) {
+            // 播放boss背景音乐
+            AudioManager.playBossBgm();
             enemyCreator = new BossEnemyCreator();
             enemyAircrafts.add(enemyCreator.createEnemy());
             bossAppearCount++;
@@ -283,6 +323,13 @@ public class Game extends JPanel {
         }
         // 英雄射击
         heroBullets.addAll(heroAircraft.shoot());
+        AudioManager.playShootSound();
+    }
+
+    private void checkPropDuration() {
+        if (heroAircraft.getPropEffectiveEndTime() < System.currentTimeMillis()) {
+            heroAircraft.setShootStrategy(new NormalShootStrategy());
+        }
     }
 
     private void bulletsMoveAction() {
@@ -320,6 +367,8 @@ public class Game extends JPanel {
                 continue;
             }
             if (heroAircraft.crash(bullet)) {
+                // 音效
+                AudioManager.playBulletHitSound();
                 // 根据攻击力扣血
                 heroAircraft.decreaseHp(bullet.getPower());
                 // 伤害判定仅生效一次
@@ -339,6 +388,8 @@ public class Game extends JPanel {
                     continue;
                 }
                 if (enemyAircraft.crash(bullet)) {
+                    // 音效
+                    AudioManager.playBulletHitSound();
                     // 敌机撞击到英雄机子弹
                     // 敌机损失一定生命值
                     enemyAircraft.decreaseHp(bullet.getPower());
@@ -396,8 +447,11 @@ public class Game extends JPanel {
         super.paint(g);
 
         // 绘制背景,图片滚动
-        g.drawImage(ImageManager.BACKGROUND_IMAGE, 0, this.backGroundTop - Main.WINDOW_HEIGHT, null);
-        g.drawImage(ImageManager.BACKGROUND_IMAGE, 0, this.backGroundTop, null);
+        BufferedImage image = gameMode == GameMode.SIMPLE ? ImageManager.BACKGROUND_IMAGE_SIMPLE :
+                                gameMode == GameMode.NORMAL ? ImageManager.BACKGROUND_IMAGE_NORMAL :
+                                    ImageManager.BACKGROUND_IMAGE_HARD;
+        g.drawImage(image, 0, this.backGroundTop - Main.WINDOW_HEIGHT, null);
+        g.drawImage(image, 0, this.backGroundTop, null);
         this.backGroundTop += 1;
         if (this.backGroundTop == Main.WINDOW_HEIGHT) {
             this.backGroundTop = 0;
@@ -415,9 +469,104 @@ public class Game extends JPanel {
         g.drawImage(ImageManager.HERO_IMAGE, heroAircraft.getLocationX() - ImageManager.HERO_IMAGE.getWidth() / 2,
                 heroAircraft.getLocationY() - ImageManager.HERO_IMAGE.getHeight() / 2, null);
 
-        //绘制得分和生命值
+        // 为英雄机绘制血条
+        drawHealthBarsForHeroAircraft(g);
+
+        // 为敌机绘制血条
+        drawHealthBarsForEnemies(g);
+
+        // 绘制得分和生命值
         paintScoreAndLife(g);
 
+        // 绘制 buff 剩余时间条
+        paintBuffTimerBar(g);
+
+    }
+    /**
+     * 为英雄机绘制血条
+     */
+    private void drawHealthBarsForHeroAircraft(Graphics g) {
+        drawHealthBar(g, heroAircraft, Color.GREEN);
+    }
+
+    /**
+     * 为所有敌机绘制血条
+     */
+    private void drawHealthBarsForEnemies(Graphics g) {
+        for (AbstractAircraft enemy : enemyAircrafts) {
+            if (!enemy.notValid()) {
+                // 只为存活的敌机绘制
+                drawHealthBar(g, enemy, Color.RED);
+            }
+        }
+    }
+
+    /**
+     * 绘制 buff 剩余时间条
+     */
+    private void paintBuffTimerBar(Graphics g) {
+        long endTime = heroAircraft.getPropEffectiveEndTime();
+        long currentTime = System.currentTimeMillis();
+
+        if (endTime > currentTime) {
+            long totalDuration = heroAircraft.getPropDuration();
+            long remainingTime = endTime - currentTime;
+            double percentage = (double) remainingTime / totalDuration;
+
+            int barWidth = 200;
+            int barHeight = 15;
+            int x = (Main.WINDOW_WIDTH - barWidth) / 2;
+            int y = Main.WINDOW_HEIGHT - 50; // 绘制在窗口底部
+
+            // 绘制背景
+            g.setColor(Color.GRAY);
+            g.fillRect(x, y, barWidth, barHeight);
+
+            // 绘制前景
+            g.setColor(Color.CYAN);
+            g.fillRect(x, y, (int) (barWidth * percentage), barHeight);
+
+            // 绘制边框
+            g.setColor(Color.WHITE);
+            g.drawRect(x, y, barWidth, barHeight);
+
+            // 绘制文字
+            g.setColor(Color.BLACK);
+            g.drawString("buff剩余时间", x + 35, y + barHeight - 2);
+        }
+    }
+
+
+    /**
+     * 可复用的绘制条方法，用于绘制血条
+     * @param g 画笔
+     * @param aircraft 目标飞行器
+     * @param color 条的颜色
+     */
+    private void drawHealthBar(Graphics g, AbstractAircraft aircraft, Color color) {
+        int hp = aircraft.getHp();
+        int maxHp = aircraft.getMaxHp();
+        if (hp <= 0 || hp == maxHp) {
+            // 血量为0或满血时，不绘制血条
+            return;
+        }
+
+        int barWidth = aircraft.getWidth(); // 血条宽度与飞机宽度一致
+        int barHeight = 5;
+        // 血条绘制在飞机下方5像素处
+        int barX = aircraft.getLocationX() - barWidth / 2;
+        int barY = aircraft.getLocationY() + aircraft.getHeight() / 2 + barHeight + 5;
+
+        // 计算血量百分比
+        double percentage = (double) hp / maxHp;
+
+        // 绘制血条背景（代表已损失的血量）
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(barX, barY, barWidth, barHeight);
+
+        // 绘制血条前景（代表剩余血量）
+        g.setColor(color);
+        g.fillRect(barX, barY, (int) (barWidth * percentage), barHeight);
     }
 
     private void paintImageWithPositionRevised(Graphics g, List<? extends AbstractFlyingObject> objects) {

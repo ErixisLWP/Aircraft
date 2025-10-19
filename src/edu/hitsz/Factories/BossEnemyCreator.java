@@ -11,7 +11,7 @@ public class BossEnemyCreator implements EnemyCreator{
 
     private int speedX = Math.random() < 0.5 ? -5 : 5;
     private int speedY = 0;
-    private int hp = 500;
+    private int hp = 1000;
 
     @Override
     public Enemy createEnemy() {

@@ -8,4 +8,5 @@ public interface PlayerDao {
     public abstract void addPlayer(Player player);
     public abstract void updatePlayer(Player player);
     public abstract void deletePlayerByName(String name);
+    public abstract void deletePlayerByIndex(int index);
 }

@@ -49,6 +49,10 @@ public abstract class AbstractAircraft extends AbstractFlyingObject {
         return hp;
     }
 
+    public int getMaxHp() {
+        return maxHp;
+    }
+
     public int getShootNum() {
         return shootNum;
     }
@@ -98,6 +102,7 @@ public abstract class AbstractAircraft extends AbstractFlyingObject {
             return null;
         }
     }
+
 //    public abstract List<BaseBullet> shoot();
 
 }

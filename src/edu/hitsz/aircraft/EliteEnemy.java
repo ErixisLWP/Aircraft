@@ -22,7 +22,7 @@ public class EliteEnemy extends Enemy{
         super(locationX, locationY, speedX, speedY, hp);
         setScore(20);
         setPower(1);
-        setShootNum(1);
+//        setShootNum(1);
     }
 
     /**

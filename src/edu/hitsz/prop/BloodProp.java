@@ -19,6 +19,7 @@ public class BloodProp extends BaseProp {
 
     @Override
     public void takeEffect(HeroAircraft heroAircraft) {
+        super.takeEffect(heroAircraft);
         heal(heroAircraft);
         this.vanish();
     }

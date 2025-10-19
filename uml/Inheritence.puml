@@ -53,6 +53,8 @@ abstract class AbstractAircraft
 
 class HeroAircraft {
     - {static} instance:HeroAircraft
+    - propDuration:long
+    - propEffectiveEndTime:long
     - HeroAircraft(int locationX, int locationY, int speedX, int speedY, int hp)
     + {static} getInstance(int locationX, int locationY, int speedX, int speedY, int hp):HeroAircraft
     + forward():void

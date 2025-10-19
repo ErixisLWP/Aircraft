@@ -1,6 +1,7 @@
 package edu.hitsz.prop;
 
 import edu.hitsz.aircraft.HeroAircraft;
+import edu.hitsz.application.AudioManager;
 import edu.hitsz.application.Main;
 import edu.hitsz.basic.AbstractFlyingObject;
 
@@ -21,5 +22,9 @@ public abstract class BaseProp extends AbstractFlyingObject {
      * 道具生效并销毁
      * @param heroAircraft 英雄机
      */
-    abstract public void takeEffect(HeroAircraft heroAircraft);
+    public void takeEffect(HeroAircraft heroAircraft) {
+        // 音效
+        AudioManager.playPropGetSound();
+    }
+//    abstract public void takeEffect(HeroAircraft heroAircraft);
 }

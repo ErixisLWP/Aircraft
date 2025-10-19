@@ -22,9 +22,16 @@ class BulletPropCreator{
     + createProp(int locationX, int locationY):BaseProp
 }
 
+class BulletPlusPropCreator{
+    - speedX:int
+    - speedY:int
+    + createProp(int locationX, int locationY):BaseProp
+}
+
 PropCreator <|.. BloodPropCreator
 PropCreator <|.. BombPropCreator
 PropCreator <|.. BulletPropCreator
+PropCreator <|.. BulletPlusPropCreator
 
 class BaseProp {
     + BaseProp(int locationX, int locationY, int speedX, int speedY)
@@ -51,6 +58,7 @@ class BombProp {
 BombProp <.. BombPropCreator
 
 class BulletProp {
+    - duration:long
     + BulletProp(int locationX, int locationY, int speedX, int speedY, int healingHP)
     - fireSupply(HeroAircraft heroAircraft):void
     + takeEffect(HeroAircraft heroAircraft):void
@@ -58,8 +66,18 @@ class BulletProp {
 
 BulletProp <.. BulletPropCreator
 
+class BulletPlusProp {
+    - duration:long
+    + BulletProp(int locationX, int locationY, int speedX, int speedY, int healingHP)
+    - firePlusSupply(HeroAircraft heroAircraft):void
+    + takeEffect(HeroAircraft heroAircraft):void
+}
+
+BulletPlusProp <.. BulletPlusPropCreator
+
 BaseProp <|-- BloodProp
 BaseProp <|-- BombProp
 BaseProp <|-- BulletProp
+BaseProp <|-- BulletPlusProp
 
 @enduml

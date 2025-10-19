@@ -19,6 +19,12 @@ public class HeroAircraft extends AbstractAircraft {
     /** 单例模式 */
     private volatile static HeroAircraft instance = null;
 
+    /** 道具持续时间 */
+    private long propDuration = 0;
+
+    /** 道具生效截止时间戳 */
+    private long propEffectiveEndTime = 0;
+
     /**
      * @param locationX 英雄机位置x坐标
      * @param locationY 英雄机位置y坐标
@@ -31,7 +37,7 @@ public class HeroAircraft extends AbstractAircraft {
         setDirection(-1);
         setPower(50);
         setBulletSpeed(10);
-        setShootNum(1);
+//        setShootNum(1);
     }
 
     /**
@@ -54,6 +60,22 @@ public class HeroAircraft extends AbstractAircraft {
     @Override
     public void forward() {
         // 英雄机由鼠标控制，不通过forward函数移动
+    }
+
+    public long getPropDuration() {
+        return propDuration;
+    }
+
+    public void setPropDuration(long propDuration) {
+        this.propDuration = propDuration;
+    }
+
+    public long getPropEffectiveEndTime() {
+        return propEffectiveEndTime;
+    }
+
+    public void setPropEffectiveEndTime(long propEffectiveEndTime) {
+        this.propEffectiveEndTime = propEffectiveEndTime;
     }
 
 //    @Override

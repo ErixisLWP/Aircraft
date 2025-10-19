@@ -13,6 +13,7 @@ public class NormalShootStrategy implements ShootStrategy{
 
     @Override
     public List<BaseBullet> shoot(AbstractAircraft aircraft) {
+        aircraft.setShootNum(1);
         List<BaseBullet> res = new LinkedList<>();
         int x = aircraft.getLocationX();
         int y = aircraft.getLocationY() + aircraft.getDirection() * 2;

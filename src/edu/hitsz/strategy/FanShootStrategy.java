@@ -13,6 +13,7 @@ public class FanShootStrategy implements ShootStrategy{
 
     @Override
     public List<BaseBullet> shoot(AbstractAircraft aircraft) {
+        aircraft.setShootNum(3);
         List<BaseBullet> res = new LinkedList<>();
         int x = aircraft.getLocationX();
         int y = aircraft.getLocationY() + aircraft.getDirection() * 2;

@@ -19,7 +19,7 @@ public class ElitePlusEnemy extends Enemy{
         super(locationX, locationY, speedX, speedY, hp);
         setScore(50);
         setPower(2);
-        setShootNum(3);
+//        setShootNum(3);
     }
 
     @Override

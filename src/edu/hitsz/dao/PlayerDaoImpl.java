@@ -38,6 +38,8 @@ public class PlayerDaoImpl implements PlayerDao {
         // 实现从文件加载玩家记录的逻辑
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(DATA_FILE))) {
             players = (List<Player>) ois.readObject();
+            // 根据分数由高到低排序并赋值排名属性
+            this.sortPlayerByScore(players);
         } catch (FileNotFoundException e) {
             // 文件不存在，第一次运行，使用空列表
             players = new ArrayList<>();
@@ -49,10 +51,21 @@ public class PlayerDaoImpl implements PlayerDao {
 
     private void savePlayersToFile() {
         // 实现保存玩家记录到文件的逻辑
+        // 存数据前先根据分数由高到低排序并赋值排名属性
+        this.sortPlayerByScore(players);
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(DATA_FILE))) {
             oos.writeObject(players);
         } catch (Exception e) {
             System.err.println("保存玩家记录失败: " + e.getMessage());
+        }
+    }
+
+    private void sortPlayerByScore(List<Player> players) {
+        players.sort((p1, p2) -> Integer.compare(p2.getScore(), p1.getScore()));
+
+        for (int i = 0; i < players.size(); i++) {
+            Player player = players.get(i);
+            player.setRank(i + 1);
         }
     }
 
@@ -67,6 +80,12 @@ public class PlayerDaoImpl implements PlayerDao {
     @Override
     public void deletePlayerByName(String name) {
         players.removeIf(player -> player.getName().equals(name));
+        savePlayersToFile();
+    }
+
+    @Override
+    public void deletePlayerByIndex(int index) {
+        players.removeIf(player -> player.getRank() == index + 1);
         savePlayersToFile();
     }
 }

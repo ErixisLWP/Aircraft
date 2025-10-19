@@ -1,6 +1,7 @@
 package edu.hitsz.prop;
 
 import edu.hitsz.aircraft.HeroAircraft;
+import edu.hitsz.application.AudioManager;
 
 public class BombProp extends BaseProp {
 
@@ -14,6 +15,8 @@ public class BombProp extends BaseProp {
 
     @Override
     public void takeEffect(HeroAircraft heroAircraft) {
+        // 爆炸音效
+        AudioManager.playBombExplosionSound();
         boom(heroAircraft);
         this.vanish();
     }

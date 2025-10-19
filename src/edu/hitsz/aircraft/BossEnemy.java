@@ -4,6 +4,7 @@ import edu.hitsz.Factories.BloodPropCreator;
 import edu.hitsz.Factories.BombPropCreator;
 import edu.hitsz.Factories.BulletPlusPropCreator;
 import edu.hitsz.Factories.BulletPropCreator;
+import edu.hitsz.application.AudioManager;
 import edu.hitsz.bullet.BaseBullet;
 import edu.hitsz.bullet.EnemyBullet;
 import edu.hitsz.prop.BaseProp;
@@ -17,7 +18,7 @@ public class BossEnemy extends Enemy {
         super(locationX, locationY, speedX, speedY, hp);
         setScore(100);
         setPower(3);
-        setShootNum(20);
+//        setShootNum(20);
     }
 
     @Override
@@ -37,5 +38,12 @@ public class BossEnemy extends Enemy {
             }
             props.add(propCreator.createProp(locationX, locationY));
         }
+    }
+
+    @Override
+    public void vanish() {
+        super.vanish();
+        // 切换回普通bgm
+        AudioManager.playBgm();
     }
 }
