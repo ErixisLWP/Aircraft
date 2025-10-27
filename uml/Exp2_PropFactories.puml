@@ -52,6 +52,8 @@ BloodProp <.. BloodPropCreator
 class BombProp {
     + BombProp(int locationX, int locationY, int speedX, int speedY, int healingHP)
     - boom(HeroAircraft heroAircraft):void
+    + getDamage():int
+    + setDamage(int damage):void
     + takeEffect(HeroAircraft heroAircraft):void
 }
 

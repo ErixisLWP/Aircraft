@@ -4,9 +4,11 @@ import edu.hitsz.Factories.BloodPropCreator;
 import edu.hitsz.Factories.BombPropCreator;
 import edu.hitsz.Factories.BulletPlusPropCreator;
 import edu.hitsz.Factories.BulletPropCreator;
+import edu.hitsz.application.Game;
 import edu.hitsz.bullet.BaseBullet;
 import edu.hitsz.bullet.EnemyBullet;
 import edu.hitsz.prop.BaseProp;
+import edu.hitsz.prop.BombProp;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -37,6 +39,16 @@ public class ElitePlusEnemy extends Enemy{
                 propCreator = new BulletPlusPropCreator();
             }
             props.add(propCreator.createProp(locationX, locationY));
+        }
+    }
+
+    @Override
+    public void update(BaseProp prop) {
+        if (prop instanceof BombProp) {
+            this.decreaseHp(((BombProp) prop).getDamage());
+            if (hp == 0) {
+                Game.addScore(this.getScore());
+            }
         }
     }
 }

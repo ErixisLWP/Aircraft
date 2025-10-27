@@ -1,5 +1,9 @@
 package edu.hitsz.bullet;
 
+import edu.hitsz.observer.EnemyObserver;
+import edu.hitsz.prop.BaseProp;
+import edu.hitsz.prop.BombProp;
+
 /**
  * @Author hitsz
  */

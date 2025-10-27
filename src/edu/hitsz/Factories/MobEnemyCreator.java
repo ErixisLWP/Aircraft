@@ -12,6 +12,7 @@ public class MobEnemyCreator implements EnemyCreator
 
     private int speedX = 0;
     private int speedY = 10;
+//    private int speedY = 5;
     private int hp = 30;
 
     @Override

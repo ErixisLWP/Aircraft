@@ -1,5 +1,6 @@
 package edu.hitsz.waigua;
 
+import edu.hitsz.application.Game;
 import edu.hitsz.dao.Player;
 import edu.hitsz.dao.PlayerDao;
 import edu.hitsz.dao.PlayerDaoImpl;
@@ -12,7 +13,7 @@ import java.awt.event.ActionListener;
 import java.time.LocalDateTime;
 
 public class Gua {
-    private JButton addScoreButton;
+    private JButton addSimpleScoreButton;
     private JTextArea enterYourNameTextArea;
     private JTextArea enterYouScoreTextArea;
     private JFormattedTextField nameTextField;
@@ -20,13 +21,14 @@ public class Gua {
     private JPanel mainPanel;
     private JPanel topPanel;
     private JPanel bottomPanel;
+    private JButton addNormalScoreButton;
+    private JButton addHardScoreButton;
+    private String mode;
 
     private String name;
     private int score;
 
     public Gua() {
-        // 创建PlayerDao实例
-        PlayerDao playerDao = new PlayerDaoImpl();
 
         // 创建Ranking窗口
         JFrame frame = new JFrame("Ranking");
@@ -42,21 +44,7 @@ public class Gua {
 //            frame.pack();
         frame.setVisible(true);
 
-//        nameTextField.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                name = nameTextField.getText();
-//            }
-//        });
-//
-//        scoreTextField.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                score = Integer.parseInt(scoreTextField.getText());
-//            }
-//        });
-
-        addScoreButton.addActionListener(new ActionListener() {
+        addSimpleScoreButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
@@ -65,10 +53,61 @@ public class Gua {
                     if (name != null) {
                         // 创建Player对象（ID设为0，rank暂时设为0，后续计算）
                         Player currentPlayer = new Player(name, score, LocalDateTime.now());
+                        // 创建PlayerDao实例
+                        PlayerDao simplePlayerDao = new PlayerDaoImpl(Game.GameMode.SIMPLE);
+//                        ((PlayerDaoImpl) simplePlayerDao).setMode(Game.GameMode.SIMPLE);
                         // 添加玩家记录
-                        playerDao.addPlayer(currentPlayer);
+                        simplePlayerDao.addPlayer(currentPlayer);
                         // 更新当前窗口
-                        rankingFrame.updateTable();
+                        rankingFrame.updateSimpleModeTable();
+                    }
+                }
+                catch (Exception error) {
+                    System.err.println("记录分数时出错: " + error.getMessage());
+                }
+            }
+        });
+
+        addNormalScoreButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    name = nameTextField.getText();
+                    score = Integer.parseInt(scoreTextField.getText());
+                    if (name != null) {
+                        // 创建Player对象（ID设为0，rank暂时设为0，后续计算）
+                        Player currentPlayer = new Player(name, score, LocalDateTime.now());
+                        // 创建PlayerDao实例
+                        PlayerDao normalPlayerDao = new PlayerDaoImpl(Game.GameMode.NORMAL);
+//                        ((PlayerDaoImpl) normalPlayerDao).setMode(Game.GameMode.NORMAL);
+                        // 添加玩家记录
+                        normalPlayerDao.addPlayer(currentPlayer);
+                        // 更新当前窗口
+                        rankingFrame.updateNormalModeTable();
+                    }
+                }
+                catch (Exception error) {
+                    System.err.println("记录分数时出错: " + error.getMessage());
+                }
+            }
+        });
+
+        addHardScoreButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    name = nameTextField.getText();
+                    score = Integer.parseInt(scoreTextField.getText());
+                    if (name != null) {
+                        // 创建Player对象（ID设为0，rank暂时设为0，后续计算）
+                        Player currentPlayer = new Player(name, score, LocalDateTime.now());
+                        // 创建PlayerDao实例
+                        PlayerDao hardPlayerDao = new PlayerDaoImpl(Game.GameMode.HARD);
+//                        ((PlayerDaoImpl) hardPlayerDao).setMode(Game.GameMode.HARD);
+                        // 添加玩家记录
+                        hardPlayerDao.addPlayer(currentPlayer);
+                        // 更新当前窗口
+                        rankingFrame.updateHardModeTable();
                     }
                 }
                 catch (Exception error) {

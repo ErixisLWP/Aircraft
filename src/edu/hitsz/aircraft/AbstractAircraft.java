@@ -4,6 +4,7 @@ import edu.hitsz.bullet.BaseBullet;
 import edu.hitsz.basic.AbstractFlyingObject;
 import edu.hitsz.strategy.ShootStrategy;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -99,7 +100,7 @@ public abstract class AbstractAircraft extends AbstractFlyingObject {
         if (shootStrategy != null) {
             return shootStrategy.shoot(this);
         } else {
-            return null;
+            return new LinkedList<>();
         }
     }
 

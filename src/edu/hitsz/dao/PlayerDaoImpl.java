@@ -1,5 +1,7 @@
 package edu.hitsz.dao;
 
+import edu.hitsz.application.Game;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,17 +9,36 @@ import java.util.List;
 public class PlayerDaoImpl implements PlayerDao {
 
     private List<Player> players;
-    private static final String DATA_FILE = "data/player_records.dat"; // 数据文件
+    private Game.GameMode gameMode;
+    private static final String DATA_FILE_SIMPLE = "data/player_records_simple.dat"; // 数据文件
+    private static final String DATA_FILE_NORMAL = "data/player_records_normal.dat"; // 数据文件
+    private static final String DATA_FILE_HARD = "data/player_records_hard.dat"; // 数据文件
 
-    public PlayerDaoImpl() {
+    private String DATA_FILE;
+
+    public PlayerDaoImpl(Game.GameMode gameMode) {
+        if (gameMode == null) {
+            gameMode = Game.GameMode.SIMPLE;
+        }
+        if (gameMode == Game.GameMode.SIMPLE) {
+            DATA_FILE = DATA_FILE_SIMPLE;
+        } else if (gameMode == Game.GameMode.NORMAL) {
+            DATA_FILE = DATA_FILE_NORMAL;
+        } else {
+            DATA_FILE = DATA_FILE_HARD;
+        }
         players = new ArrayList<Player>();
-        loadPlayersFromFile(); // 启动时加载已有记录
+        loadPlayersFromFile(DATA_FILE); // 启动时加载已有记录
     }
+
+//    public void setMode(Game.GameMode mode) {
+//        this.gameMode = mode;
+//    }
 
     @Override
     public void addPlayer(Player player) {
         players.add(player);
-        savePlayersToFile(); // 保存到文件
+            savePlayersToFile(DATA_FILE); // 保存到文件
     }
 
     @Override
@@ -34,9 +55,9 @@ public class PlayerDaoImpl implements PlayerDao {
     }
 
     // 其他方法实现...
-    private void loadPlayersFromFile() {
+    private void loadPlayersFromFile(String file) {
         // 实现从文件加载玩家记录的逻辑
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(DATA_FILE))) {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
             players = (List<Player>) ois.readObject();
             // 根据分数由高到低排序并赋值排名属性
             this.sortPlayerByScore(players);
@@ -49,11 +70,11 @@ public class PlayerDaoImpl implements PlayerDao {
         }
     }
 
-    private void savePlayersToFile() {
+    private void savePlayersToFile(String file) {
         // 实现保存玩家记录到文件的逻辑
         // 存数据前先根据分数由高到低排序并赋值排名属性
         this.sortPlayerByScore(players);
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(DATA_FILE))) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
             oos.writeObject(players);
         } catch (Exception e) {
             System.err.println("保存玩家记录失败: " + e.getMessage());
@@ -74,18 +95,18 @@ public class PlayerDaoImpl implements PlayerDao {
         // 实现更新逻辑
         deletePlayerByName(player.getName());
         players.add(player);
-        savePlayersToFile();
+        savePlayersToFile(DATA_FILE);
     }
 
     @Override
     public void deletePlayerByName(String name) {
         players.removeIf(player -> player.getName().equals(name));
-        savePlayersToFile();
+        savePlayersToFile(DATA_FILE);
     }
 
     @Override
     public void deletePlayerByIndex(int index) {
         players.removeIf(player -> player.getRank() == index + 1);
-        savePlayersToFile();
+        savePlayersToFile(DATA_FILE);
     }
 }

@@ -58,7 +58,7 @@
           </component>
         </children>
       </grid>
-      <grid id="910bd" binding="bottomPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+      <grid id="910bd" binding="bottomPanel" layout-manager="GridLayoutManager" row-count="3" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
           <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -66,14 +66,34 @@
         <properties/>
         <border type="none"/>
         <children>
-          <component id="d8202" class="javax.swing.JButton" binding="addScoreButton">
+          <component id="d8202" class="javax.swing.JButton" binding="addSimpleScoreButton">
             <constraints>
               <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false">
                 <preferred-size width="200" height="60"/>
               </grid>
             </constraints>
             <properties>
-              <text value="将成绩加入排行榜"/>
+              <text value="将成绩加入SIMPLE排行榜"/>
+            </properties>
+          </component>
+          <component id="965c0" class="javax.swing.JButton" binding="addHardScoreButton">
+            <constraints>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                <preferred-size width="200" height="60"/>
+              </grid>
+            </constraints>
+            <properties>
+              <text value="将成绩加入HARD排行榜"/>
+            </properties>
+          </component>
+          <component id="b9878" class="javax.swing.JButton" binding="addNormalScoreButton">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="0" indent="1" use-parent-layout="false">
+                <preferred-size width="200" height="60"/>
+              </grid>
+            </constraints>
+            <properties>
+              <text value="将成绩加入NORMAL排行榜"/>
             </properties>
           </component>
         </children>

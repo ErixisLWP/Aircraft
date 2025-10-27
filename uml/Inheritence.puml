@@ -71,6 +71,7 @@ class Enemy {
     + getScore():int
     + setScore(int score):void
     + dropProp(List<BaseProp> props, int locationX, int locationY):void
+    + update(BaseProp prop):void
 }
 
 class MobEnemy {
@@ -84,17 +85,20 @@ class EliteEnemy {
     + EliteEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
     + dropProp(List<BaseProp> props, int locationX, int locationY):void
     + getPropRate():double
+    + update(BaseProp prop):void
 }
 
 class ElitePlusEnemy {
     - propRate:double
     + ElitePlusEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
     + dropProp(List<BaseProp> props, int locationX, int locationY):void
+    + update(BaseProp prop):void
 }
 
 class BossEnemy {
     + BossEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
     + dropProp(List<BaseProp> props, int locationX, int locationY):void
+    + update(BaseProp prop):void
 }
 
 Enemy <|-- MobEnemy
@@ -143,6 +147,8 @@ class BloodProp {
 class BombProp {
     + BombProp(int locationX, int locationY, int speedX, int speedY, int healingHP)
     - boom(HeroAircraft heroAircraft):void
+    + getDamage():int
+    + setDamage(int damage):void
     + takeEffect(HeroAircraft heroAircraft):void
 }
 

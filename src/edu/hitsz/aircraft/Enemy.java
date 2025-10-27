@@ -1,14 +1,17 @@
 package edu.hitsz.aircraft;
 
 import edu.hitsz.Factories.PropCreator;
+import edu.hitsz.application.Game;
 import edu.hitsz.application.Main;
 import edu.hitsz.bullet.BaseBullet;
+import edu.hitsz.observer.EnemyObserver;
 import edu.hitsz.prop.BaseProp;
+import edu.hitsz.prop.BombProp;
 
 import java.util.Collections;
 import java.util.List;
 
-public abstract class Enemy extends AbstractAircraft {
+public abstract class Enemy extends AbstractAircraft implements EnemyObserver {
 
     private int score;
 
@@ -47,4 +50,12 @@ public abstract class Enemy extends AbstractAircraft {
      * @param locationY 道具位置y坐标
      */
     abstract public void dropProp(List<BaseProp> props, int locationX, int locationY);
+
+    @Override
+    public void update(BaseProp prop) {
+        if (prop instanceof BombProp) {
+            Game.addScore(score);
+            this.vanish();
+        }
+    }
 }

@@ -28,10 +28,13 @@ Player <-- PlayerDao
 
 class PlayerDaoImpl {
     - players: List<Player>
+    - static final DATA_FILE_SIMPLE: String
+    - static final DATA_FILE_NORMAL: String
+    - static final DATA_FILE_HARD: String
     - DATA_FILE: String
     + PlayerDaoImpl()
-    - LoadPlayersFromFile(): void
-    - SavePlayersToFile(): void
+    - LoadPlayersFromFile(String file): void
+    - SavePlayersToFile(String file): void
     + getAllPlayers(): List<Player>
     + getPlayerByName(String name): Player
     + addPlayer(Player player): void

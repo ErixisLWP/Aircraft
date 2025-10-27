@@ -1,0 +1,43 @@
+@startuml
+
+class GameTemplateMethod {
+    + {abstract} void setEnemyMaxNumber(int enemyMaxNumber):void
+    + {abstract} void setHeroAircraftShootCycle(int heroAircraftCycle):void
+    + {abstract} void setEnemyBirthAndShootCycle(int enemyCycle):void
+    + {abstract} void setEliteAndElitePlusEnemyProbability(float eliteEnemyProbability, float elitePlusEnemyProbability):void
+    + {abstract} void setBossThreshold(int bossThreshold):void
+    + {abstract} void getHarderByTime(HeroAircraft heroAircraft):void
+    + final void setGameDifficulty():void
+}
+
+class SimpleGameTemplateMethod {
+    + void setEnemyMaxNumber(int enemyMaxNumber):void
+    + void setHeroAircraftShootCycle(int heroAircraftCycle):void
+    + void setEnemyBirthAndShootCycle(int enemyCycle):void
+    + void setEliteAndElitePlusEnemyProbability(float eliteEnemyProbability, float elitePlusEnemyProbability):void
+    + void setBossThreshold(int bossThreshold):void
+}
+
+class NormalGameTemplateMethod {
+    + void setEnemyMaxNumber(int enemyMaxNumber):void
+    + void setHeroAircraftShootCycle(int heroAircraftCycle):void
+    + void setEnemyBirthAndShootCycle(int enemyCycle):void
+    + void setEliteAndElitePlusEnemyProbability(float eliteEnemyProbability, float elitePlusEnemyProbability):void
+    + void setBossThreshold(int bossThreshold):void
+    + void getHarderByTime(HeroAircraft heroAircraft):void
+}
+
+class HardGameTemplateMethod {
+    + void setEnemyMaxNumber(int enemyMaxNumber):void
+    + void setHeroAircraftShootCycle(int heroAircraftCycle):void
+    + void setEnemyBirthAndShootCycle(int enemyCycle):void
+    + void setEliteAndElitePlusEnemyProbability(float eliteEnemyProbability, float elitePlusEnemyProbability):void
+    + void setBossThreshold(int bossThreshold):void
+    + void getHarderByTime(HeroAircraft heroAircraft):void
+}
+
+GameTemplateMethod <|-- SimpleGameTemplateMethod
+GameTemplateMethod <|-- NormalGameTemplateMethod
+GameTemplateMethod <|-- HardGameTemplateMethod
+
+@enduml

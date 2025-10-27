@@ -18,44 +18,57 @@ class EliteEnemyCreator{
     + createEnemy():Enemy
 }
 
+class BossEnemyCreator{
+    - speedX:int
+    - speedY:int
+    - hp:int
+    + createEnemy():Enemy
+}
+
 EnemyCreator <|.. MobEnemyCreator
 EnemyCreator <|.. EliteEnemyCreator
+EnemyCreator <|.. BossEnemyCreator
 
 class Enemy {
     - score:int
+    # propCreator:PropCreator
     + Enemy(int locationX, int locationY, int speedX, int speedY, int hp)
     + forward():void
     + getScore():int
     + setScore(int score):void
-    + dropProp(List<BaseProp props, int locationX, int locationY):void
+    + dropProp(List<BaseProp> props, int locationX, int locationY):void
+    + update(BaseProp prop):void
 }
 
 class MobEnemy {
     + MobEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
-    + forward():void
-    + shoot():List<BaseBullet>
-    + dropProp():void
+    + dropProp(List<BaseProp> props, int locationX, int locationY):void
 }
 
 MobEnemy <.. MobEnemyCreator
 
 class EliteEnemy {
-    - shootNum:int
-    - power:int
-    - direction:int
-    - bulletSpeedX:int
-    - bulletSpeedY:int
+    - propRate:double
     - {static} propRate:double
     + EliteEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
-    + shoot():List<BaseBullet>
-    + dropProp():void
+    + dropProp(List<BaseProp> props, int locationX, int locationY):void
     + getPropRate():double
+    + update(BaseProp prop):void
 }
 
 EliteEnemy <.. EliteEnemyCreator
 
+class BossEnemy {
+    + BossEnemy(int locationX, int locationY, int speedX, int speedY, int hp)
+    + dropProp(List<BaseProp> props, int locationX, int locationY):void
+    + update(BaseProp prop):void
+}
+
+BossEnemy <.. BossEnemyCreator
+
 Enemy <|-- MobEnemy
 Enemy <|-- EliteEnemy
+Enemy <|-- BossEnemy
 
 
 @enduml

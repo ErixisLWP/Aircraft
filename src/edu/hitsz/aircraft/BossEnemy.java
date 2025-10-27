@@ -5,9 +5,11 @@ import edu.hitsz.Factories.BombPropCreator;
 import edu.hitsz.Factories.BulletPlusPropCreator;
 import edu.hitsz.Factories.BulletPropCreator;
 import edu.hitsz.application.AudioManager;
+import edu.hitsz.application.Game;
 import edu.hitsz.bullet.BaseBullet;
 import edu.hitsz.bullet.EnemyBullet;
 import edu.hitsz.prop.BaseProp;
+import edu.hitsz.prop.BombProp;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -45,5 +47,15 @@ public class BossEnemy extends Enemy {
         super.vanish();
         // 切换回普通bgm
         AudioManager.playBgm();
+    }
+
+    @Override
+    public void update(BaseProp prop) {
+        if (prop instanceof BombProp) {
+//            this.decreaseHp(((BombProp) prop).getDamage());
+//            if (hp == 0) {
+//                Game.addScore(this.getScore());
+//            }
+        }
     }
 }

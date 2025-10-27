@@ -24,7 +24,6 @@ public class MobEnemy extends Enemy {
 
     @Override
     public void dropProp(List<BaseProp> props, int locationX, int locationY) {
-        return;
     }
 
 }

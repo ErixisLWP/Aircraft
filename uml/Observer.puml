@@ -1,0 +1,34 @@
+@startuml
+
+interface EnemyObserver {
+    + {abstract} update(BaseProp prop):void
+}
+
+class BombProp {
+    - enemyBulletList:List<BaseBullet>
+    - enemyAircraftList:List<Enemy>
+    + BombProp(int locationX, int locationY, int speedX, int speedY, int healingHP)
+    - boom(HeroAircraft heroAircraft):void
+    + takeEffect(HeroAircraft heroAircraft):void
+    + update(BaseProp:prop):void
+}
+
+EnemyObserver <|.. BombProp
+
+class ObserverManager {
+    - enemyBulletObserverList:List<BaseBullet>
+    - enemyAircraftObserverList:List<Enemy>
+    + registerBulletObserver(EnemyBullet enemyBullet):void
+    + registerAircraftObserver(Enemy enemy):void
+    + removeBulletObserver(EnemyBullet enemyBullet):void
+    + removeAircraftObserver(Enemy enemy):void
+    + notifyAllObservers(BaseProp prop):void
+}
+
+EnemyObserver <--o ObserverManager
+
+Subject <-- Game
+
+BombProp <.. Game
+
+@enduml
