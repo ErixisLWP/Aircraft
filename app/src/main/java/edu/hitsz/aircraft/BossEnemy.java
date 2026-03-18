@@ -1,0 +1,77 @@
+package edu.hitsz.aircraft;
+
+import edu.hitsz.Factories.BloodPropCreator;
+import edu.hitsz.Factories.BombPropCreator;
+import edu.hitsz.Factories.BulletPlusPropCreator;
+import edu.hitsz.Factories.BulletPropCreator;
+import edu.hitsz.application.AudioManager;
+import edu.hitsz.application.Game;
+import edu.hitsz.application.Main;
+import edu.hitsz.bullet.BaseBullet;
+import edu.hitsz.bullet.EnemyBullet;
+import edu.hitsz.prop.BaseProp;
+import edu.hitsz.prop.BombProp;
+
+import java.util.LinkedList;
+import java.util.List;
+
+public class BossEnemy extends Enemy {
+
+    public BossEnemy(int locationX, int locationY, int speedX, int speedY, int hp) {
+        super(locationX, locationY, speedX, speedY, hp);
+        setScore(100);
+        setPower(3);
+//        setShootNum(20);
+    }
+
+    @Override
+    public void forward() {
+        locationX += speedX;
+        locationY += speedY;
+
+        int halfWidth = getWidth() / 2;
+        if (locationX <= halfWidth) {
+            locationX = halfWidth;
+            speedX = Math.abs(speedX);
+        } else if (locationX >= Main.WINDOW_WIDTH - halfWidth) {
+            locationX = Main.WINDOW_WIDTH - halfWidth;
+            speedX = -Math.abs(speedX);
+        }
+    }
+
+    @Override
+    public void dropProp(List<BaseProp> props, int locationX, int locationY) {
+        int propCount = (int)(Math.random() * 4); // 0~3涓?
+        for (int i = 0; i < propCount; i++) {
+            double randomNum = Math.random();
+            if (randomNum < 3 / 10.0d) {
+                propCreator = new BloodPropCreator();
+            } else if (randomNum < 6 / 10.0d) {
+                propCreator = new BombPropCreator();
+            } else if (randomNum < 9 / 10.0d) {
+                propCreator = new BulletPropCreator();
+            }
+            else {
+                propCreator = new BulletPlusPropCreator();
+            }
+            props.add(propCreator.createProp(locationX, locationY));
+        }
+    }
+
+    @Override
+    public void vanish() {
+        super.vanish();
+        // 鍒囨崲鍥炴櫘閫歜gm
+        AudioManager.playBgm();
+    }
+
+    @Override
+    public void update(BaseProp prop) {
+        if (prop instanceof BombProp) {
+//            this.decreaseHp(((BombProp) prop).getDamage());
+//            if (hp == 0) {
+//                Game.addScore(this.getScore());
+//            }
+        }
+    }
+}

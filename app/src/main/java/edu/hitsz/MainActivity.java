@@ -2,23 +2,44 @@ package edu.hitsz;
 
 import android.os.Bundle;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
-public class MainActivity extends AppCompatActivity {
+import com.google.android.material.button.MaterialButton;
+
+import edu.hitsz.application.AudioManager;
+import edu.hitsz.application.Game;
+
+public class MainActivity extends AppCompatActivity implements Game.GameStateListener {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
+        AudioManager.init(this);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
+        showStartMenu();
+    }
+
+    private void showStartMenu() {
         setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+        MaterialButton startGameButton = findViewById(R.id.startGameButton);
+        startGameButton.setOnClickListener(view -> startGame());
+    }
+
+    private void startGame() {
+        Game.gameMode = Game.GameMode.SIMPLE;
+        setContentView(new Game(this, this));
+    }
+
+    @Override
+    public void onGameOver() {
+        runOnUiThread(this::showStartMenu);
+    }
+
+    @Override
+    protected void onDestroy() {
+        AudioManager.release();
+        super.onDestroy();
     }
 }
