@@ -23,12 +23,17 @@ public class MainActivity extends AppCompatActivity implements Game.GameStateLis
 
     private void showStartMenu() {
         setContentView(R.layout.activity_main);
-        MaterialButton startGameButton = findViewById(R.id.startGameButton);
-        startGameButton.setOnClickListener(view -> startGame());
+        MaterialButton simpleGameButton = findViewById(R.id.simpleGameButton);
+        MaterialButton normalGameButton = findViewById(R.id.normalGameButton);
+        MaterialButton hardGameButton = findViewById(R.id.hardGameButton);
+
+        simpleGameButton.setOnClickListener(view -> startGame(Game.GameMode.SIMPLE));
+        normalGameButton.setOnClickListener(view -> startGame(Game.GameMode.NORMAL));
+        hardGameButton.setOnClickListener(view -> startGame(Game.GameMode.HARD));
     }
 
-    private void startGame() {
-        Game.gameMode = Game.GameMode.SIMPLE;
+    private void startGame(Game.GameMode mode) {
+        Game.gameMode = mode;
         setContentView(new Game(this, this));
     }
 

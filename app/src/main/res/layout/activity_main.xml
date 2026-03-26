@@ -53,16 +53,46 @@
             android:textSize="16sp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/startGameButton"
+            android:id="@+id/simpleGameButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
+            android:backgroundTint="#7AE582"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingVertical="14dp"
+            android:text="Simple"
+            android:textColor="#0B2A10"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:cornerRadius="14dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/normalGameButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
             android:backgroundTint="#FFD166"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:paddingVertical="14dp"
-            android:text="Start Game"
+            android:text="Normal"
             android:textColor="#3B220F"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:cornerRadius="14dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/hardGameButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#FF6B6B"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingVertical="14dp"
+            android:text="Hard"
+            android:textColor="#3B0B0B"
             android:textSize="18sp"
             android:textStyle="bold"
             app:cornerRadius="14dp" />
