@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">AircarftWar</string>
     <string name="start_background_desc">Start screen background</string>
+    <string name="settings_desc">Settings</string>
 </resources>

@@ -12,6 +12,12 @@ import edu.hitsz.R;
 
 public final class AudioManager {
 
+    // 音乐开关（BGM）
+    private static boolean musicEnabled = true;
+    // 音效开关（SoundPool音效）
+    private static boolean soundEffectEnabled = true;
+
+    // 兼容旧代码
     public static boolean audioEffect = true;
 
     private static final String BGM = "bgm";
@@ -117,7 +123,7 @@ public final class AudioManager {
     }
 
     private static void playMusic(String key) {
-        if (!audioEffect || appContext == null) {
+        if (!musicEnabled || !audioEffect || appContext == null) {
             return;
         }
         prepareMusicPlayers();
@@ -142,7 +148,7 @@ public final class AudioManager {
     }
 
     private static void playEffect(String key, float volume) {
-        if (!audioEffect || soundPool == null || appContext == null) {
+        if (!soundEffectEnabled || !audioEffect || soundPool == null || appContext == null) {
             return;
         }
         Integer soundId = soundPoolIds.get(key);
@@ -213,5 +219,27 @@ public final class AudioManager {
         }
         soundPoolIds.clear();
         appContext = null;
+    }
+
+    // ========== 音乐/音效开关控制 ==========
+
+    public static boolean isMusicEnabled() {
+        return musicEnabled;
+    }
+
+    public static boolean isSoundEffectEnabled() {
+        return soundEffectEnabled;
+    }
+
+    public static void setMusicEnabled(boolean enabled) {
+        musicEnabled = enabled;
+        if (!enabled) {
+            pauseMusic(bgmPlayer);
+            pauseMusic(bossBgmPlayer);
+        }
+    }
+
+    public static void setSoundEffectEnabled(boolean enabled) {
+        soundEffectEnabled = enabled;
     }
 }

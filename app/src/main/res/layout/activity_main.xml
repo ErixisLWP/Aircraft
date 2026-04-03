@@ -98,4 +98,19 @@
             app:cornerRadius="14dp" />
     </LinearLayout>
 
+    <!-- 设置按钮 - 右下角 -->
+    <ImageButton
+        android:id="@+id/settingsButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp"
+        android:background="#80000000"
+        android:contentDescription="@string/settings_desc"
+        android:src="@android:drawable/ic_menu_manage"
+        android:tint="#FFFFFF"
+        android:scaleType="center"
+        android:elevation="4dp" />
+
 </FrameLayout>
