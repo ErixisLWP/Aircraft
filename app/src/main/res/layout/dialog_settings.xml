@@ -9,7 +9,7 @@
         android:id="@+id/musicCheckBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="音乐 (BGM)"
+        android:text="背景音乐"
         android:textSize="16sp"
         android:paddingVertical="8dp" />
 

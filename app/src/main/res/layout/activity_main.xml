@@ -36,7 +36,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:letterSpacing="0.08"
-            android:text="AIRCRAFT WAR"
+            android:text="@string/start_title"
             android:textAllCaps="true"
             android:textColor="#FFF4E1"
             android:textSize="28sp"
@@ -48,7 +48,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:gravity="center"
-            android:text="Tap start to enter the battlefield&#10;Defeat enemies and challenge the Boss"
+            android:text="@string/start_subtitle"
             android:textColor="#FFE7D0"
             android:textSize="16sp" />
 
@@ -61,7 +61,7 @@
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:paddingVertical="14dp"
-            android:text="Simple"
+            android:text="@string/start_mode_simple"
             android:textColor="#0B2A10"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -76,7 +76,7 @@
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:paddingVertical="14dp"
-            android:text="Normal"
+            android:text="@string/start_mode_normal"
             android:textColor="#3B220F"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -91,11 +91,26 @@
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:paddingVertical="14dp"
-            android:text="Hard"
+            android:text="@string/start_mode_hard"
             android:textColor="#3B0B0B"
             android:textSize="18sp"
             android:textStyle="bold"
             app:cornerRadius="14dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/networkBattleButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:backgroundTint="#6EC1FF"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingVertical="14dp"
+                android:text="@string/start_mode_network"
+                android:textColor="#0A2236"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                app:cornerRadius="14dp" />
     </LinearLayout>
 
     <!-- 设置按钮 - 右下角 -->
