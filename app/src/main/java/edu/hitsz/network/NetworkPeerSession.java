@@ -35,6 +35,7 @@ public class NetworkPeerSession {
     private Socket socket;
     private BufferedReader reader;
     private BufferedWriter writer;
+    private LanHostDiscovery.HostResponder hostResponder;
 
     public NetworkPeerSession(NetworkBattleConfig config, Listener listener) {
         this.config = config;
@@ -61,6 +62,7 @@ public class NetworkPeerSession {
             }
         } finally {
             running = false;
+            stopHostDiscoveryResponder();
             closeQuietly(reader);
             closeQuietly(writer);
             closeQuietly(socket);
@@ -71,8 +73,10 @@ public class NetworkPeerSession {
 
     private void establishConnection() throws IOException {
         if (config.isHost()) {
+            startHostDiscoveryResponder();
             serverSocket = new ServerSocket(config.getPort());
             socket = serverSocket.accept();
+            stopHostDiscoveryResponder();
         } else {
             socket = new Socket(config.getHostAddress(), config.getPort());
         }
@@ -109,8 +113,29 @@ public class NetworkPeerSession {
 
     public void close() {
         running = false;
+        stopHostDiscoveryResponder();
         closeQuietly(socket);
         closeQuietly(serverSocket);
+    }
+
+    private void startHostDiscoveryResponder() {
+        if (hostResponder != null) {
+            return;
+        }
+        try {
+            hostResponder = new LanHostDiscovery.HostResponder(config.getPort(), config.getMode().name());
+            hostResponder.start();
+        } catch (IOException ignored) {
+            hostResponder = null;
+        }
+    }
+
+    private void stopHostDiscoveryResponder() {
+        if (hostResponder == null) {
+            return;
+        }
+        hostResponder.close();
+        hostResponder = null;
     }
 
     private void closeQuietly(Closeable closeable) {

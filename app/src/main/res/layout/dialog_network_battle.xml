@@ -69,6 +69,39 @@
         android:inputType="textUri"
         android:maxLines="1" />
 
+    <TextView
+        android:id="@+id/networkDiscoveredHostsLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/network_discovered_hosts_label"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <Spinner
+        android:id="@+id/networkHostSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/networkScanButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/network_scan_hosts"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/networkScanStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textSize="13sp"
+        android:textColor="#666666"
+        android:visibility="gone" />
+
     <EditText
         android:id="@+id/networkPortInput"
         android:layout_width="match_parent"
