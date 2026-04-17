@@ -40,7 +40,7 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
     private static final String RESULT_PVP_DRAW = "PVP_DRAW";
 
     private static final long FRAME_MS = 40L;
-    private static final long STATE_PUSH_MS = 80L;
+    private static final long STATE_PUSH_MS = 40L;
     private static final long INPUT_PUSH_MS = 50L;
 
     private static final long PLAYER_SHOOT_INTERVAL_MS = 420L;
@@ -241,6 +241,10 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
                 updateHostGame();
             } else if (connected && !host && worldReady && !gameOver && !disconnected) {
                 maybeSendClientInput();
+                synchronized (stateLock) {
+                    players[localPlayerIndex].x = clamp(localInputX, heroHalfWidth(), worldWidth - heroHalfWidth());
+                    players[localPlayerIndex].y = clampYForPlayer(localPlayerIndex, localInputY);
+                }
             }
             drawFrame();
             long elapsed = SystemClock.uptimeMillis() - frameStart;
@@ -325,6 +329,15 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         localInputX = x;
         localInputY = y;
         inputDirty = true;
+        nextInputPushAt = 0L;
+
+        // Client-side prediction: move local plane immediately instead of waiting for host snapshot.
+        if (!host) {
+            synchronized (stateLock) {
+                players[localPlayerIndex].x = x;
+                players[localPlayerIndex].y = y;
+            }
+        }
         return true;
     }
 
