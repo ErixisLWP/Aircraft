@@ -31,6 +31,7 @@ import edu.hitsz.network.NetworkBattleActivity;
 public class MainActivity extends AppCompatActivity implements Game.GameStateListener {
 
     private static final int DEFAULT_NETWORK_PORT = 24567;
+    private static final String EMULATOR_HOST = "10.0.2.2";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +66,8 @@ public class MainActivity extends AppCompatActivity implements Game.GameStateLis
         RadioGroup modeGroup = dialogView.findViewById(R.id.networkModeGroup);
         RadioGroup roleGroup = dialogView.findViewById(R.id.networkRoleGroup);
         RadioButton roleHostButton = dialogView.findViewById(R.id.networkRoleHost);
+        CheckBox emulatorModeCheckBox = dialogView.findViewById(R.id.networkEmulatorModeCheckBox);
+        TextView emulatorTipText = dialogView.findViewById(R.id.networkEmulatorTipText);
         EditText hostInput = dialogView.findViewById(R.id.networkHostInput);
         EditText portInput = dialogView.findViewById(R.id.networkPortInput);
         TextView discoveredHostsLabel = dialogView.findViewById(R.id.networkDiscoveredHostsLabel);
@@ -98,14 +101,25 @@ public class MainActivity extends AppCompatActivity implements Game.GameStateLis
 
         Runnable applyRoleUiState = () -> {
             boolean isHost = roleGroup.getCheckedRadioButtonId() == R.id.networkRoleHost;
-            hostInput.setEnabled(!isHost);
-            hostInput.setAlpha(isHost ? 0.5f : 1f);
+            boolean emulatorMode = emulatorModeCheckBox.isChecked();
+            boolean enableHostInput = !isHost && !emulatorMode;
+            hostInput.setEnabled(enableHostInput);
+            hostInput.setAlpha(enableHostInput ? 1f : 0.5f);
 
-            int clientOnlyVisibility = isHost ? View.GONE : View.VISIBLE;
+            if (!isHost && emulatorMode) {
+                hostInput.setText(EMULATOR_HOST);
+            }
+
+            int clientOnlyVisibility = (!isHost && !emulatorMode) ? View.VISIBLE : View.GONE;
             discoveredHostsLabel.setVisibility(clientOnlyVisibility);
             hostSpinner.setVisibility(clientOnlyVisibility);
             scanButton.setVisibility(clientOnlyVisibility);
             scanStatusText.setVisibility(clientOnlyVisibility);
+
+            emulatorTipText.setVisibility((emulatorMode && !isHost) ? View.VISIBLE : View.GONE);
+            if (emulatorMode) {
+                scanStatusText.setText(R.string.network_emulator_mode_tip_short);
+            }
 
             if (isHost) {
                 scanStatusText.setText("");
@@ -115,6 +129,7 @@ public class MainActivity extends AppCompatActivity implements Game.GameStateLis
         roleGroup.setOnCheckedChangeListener((group, checkedId) -> {
             applyRoleUiState.run();
         });
+        emulatorModeCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> applyRoleUiState.run());
         roleHostButton.setChecked(true);
         applyRoleUiState.run();
 
@@ -200,6 +215,7 @@ public class MainActivity extends AppCompatActivity implements Game.GameStateLis
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             boolean isPve = modeGroup.getCheckedRadioButtonId() == R.id.networkModePve;
             boolean isHost = roleGroup.getCheckedRadioButtonId() == R.id.networkRoleHost;
+            boolean emulatorMode = emulatorModeCheckBox.isChecked();
 
             String portText = portInput.getText() == null ? "" : portInput.getText().toString().trim();
             int port;
@@ -216,6 +232,9 @@ public class MainActivity extends AppCompatActivity implements Game.GameStateLis
             }
 
             String host = hostInput.getText() == null ? "" : hostInput.getText().toString().trim();
+            if (!isHost && emulatorMode) {
+                host = EMULATOR_HOST;
+            }
             if (!isHost && !discoveredHosts.isEmpty() && hostSpinner.getSelectedItemPosition() >= 0
                     && hostSpinner.getSelectedItemPosition() < discoveredHosts.size()) {
                 host = discoveredHosts.get(hostSpinner.getSelectedItemPosition()).ipAddress;
@@ -226,19 +245,20 @@ public class MainActivity extends AppCompatActivity implements Game.GameStateLis
                 return;
             }
 
-            startNetworkBattle(isPve, isHost, host, port);
+            startNetworkBattle(isPve, isHost, host, port, emulatorMode);
             dialog.dismiss();
         }));
         dialog.show();
     }
 
-    private void startNetworkBattle(boolean isPve, boolean isHost, String host, int port) {
+    private void startNetworkBattle(boolean isPve, boolean isHost, String host, int port, boolean emulatorMode) {
         Intent intent = new Intent(this, NetworkBattleActivity.class);
         intent.putExtra(NetworkBattleActivity.EXTRA_MODE,
                 isPve ? NetworkBattleActivity.MODE_PVE : NetworkBattleActivity.MODE_PVP);
         intent.putExtra(NetworkBattleActivity.EXTRA_ROLE_HOST, isHost);
         intent.putExtra(NetworkBattleActivity.EXTRA_HOST, host);
         intent.putExtra(NetworkBattleActivity.EXTRA_PORT, port);
+        intent.putExtra(NetworkBattleActivity.EXTRA_EMULATOR_MODE, emulatorMode);
         startActivity(intent);
     }
 

@@ -60,6 +60,23 @@
             android:text="@string/network_role_client" />
     </RadioGroup>
 
+    <CheckBox
+        android:id="@+id/networkEmulatorModeCheckBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/network_emulator_mode_label" />
+
+    <TextView
+        android:id="@+id/networkEmulatorTipText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/network_emulator_mode_desc"
+        android:textColor="#666666"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
     <EditText
         android:id="@+id/networkHostInput"
         android:layout_width="match_parent"

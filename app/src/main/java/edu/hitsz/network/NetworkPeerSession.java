@@ -1,5 +1,7 @@
 package edu.hitsz.network;
 
+import android.os.Build;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -10,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 
 public class NetworkPeerSession {
@@ -74,14 +77,49 @@ public class NetworkPeerSession {
     private void establishConnection() throws IOException {
         if (config.isHost()) {
             startHostDiscoveryResponder();
-            serverSocket = new ServerSocket(config.getPort());
+            serverSocket = new ServerSocket();
+            serverSocket.setReuseAddress(true);
+            serverSocket.bind(new InetSocketAddress(config.getPort()));
             socket = serverSocket.accept();
             stopHostDiscoveryResponder();
         } else {
-            socket = new Socket(config.getHostAddress(), config.getPort());
+            String hostAddress = resolveHostAddress(config.getHostAddress(), config.isEmulatorMode());
+            Socket client = new Socket();
+            client.connect(new InetSocketAddress(hostAddress, config.getPort()), 8000);
+            socket = client;
         }
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
         writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+    }
+
+    private String resolveHostAddress(String rawHostAddress, boolean emulatorMode) throws IOException {
+        String hostAddress = rawHostAddress == null ? "" : rawHostAddress.trim();
+        boolean shouldUseEmulatorAlias = emulatorMode || isRunningOnEmulator();
+
+        if (hostAddress.isEmpty()) {
+            if (shouldUseEmulatorAlias) {
+                return "10.0.2.2";
+            }
+            throw new IOException("房主地址为空");
+        }
+
+        if (shouldUseEmulatorAlias && isLoopbackHost(hostAddress)) {
+            return "10.0.2.2";
+        }
+        return hostAddress;
+    }
+
+    private boolean isLoopbackHost(String hostAddress) {
+        return "127.0.0.1".equals(hostAddress) || "localhost".equalsIgnoreCase(hostAddress);
+    }
+
+    private boolean isRunningOnEmulator() {
+        return Build.FINGERPRINT.startsWith("generic")
+                || Build.FINGERPRINT.contains("vbox")
+                || Build.FINGERPRINT.contains("emulator")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86")
+                || "google_sdk".equals(Build.PRODUCT);
     }
 
     private void readLoop() throws Exception {

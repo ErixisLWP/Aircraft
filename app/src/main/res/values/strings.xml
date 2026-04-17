@@ -16,7 +16,10 @@
     <string name="network_role_label">连接角色</string>
     <string name="network_role_host">创建房间（房主）</string>
     <string name="network_role_client">加入房间（客户端）</string>
-    <string name="network_host_hint">房主IP（如 192.168.1.10）</string>
+    <string name="network_emulator_mode_label">虚拟机测试模式（推荐）</string>
+    <string name="network_emulator_mode_desc">客户端会自动连接 10.0.2.2，适合 Android Studio 虚拟机调试</string>
+    <string name="network_emulator_mode_tip_short">虚拟机模式已启用：客户端将使用 10.0.2.2</string>
+    <string name="network_host_hint">房主IP（局域网如 192.168.1.10，虚拟机常用 10.0.2.2）</string>
     <string name="network_port_hint">端口（默认 24567）</string>
     <string name="network_discovered_hosts_label">局域网房主列表</string>
     <string name="network_scan_hosts">扫描局域网房主</string>
