@@ -1,8 +1,10 @@
 package edu.hitsz.network;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
 import android.os.SystemClock;
 import android.view.MotionEvent;
@@ -20,6 +22,8 @@ import java.util.List;
 import java.util.Random;
 
 import edu.hitsz.R;
+import edu.hitsz.application.ImageManager;
+import edu.hitsz.application.Main;
 
 public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Callback, Runnable {
 
@@ -38,11 +42,28 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
     private static final String RESULT_PVP_DRAW = "PVP_DRAW";
 
     private static final long FRAME_MS = 40L;
-    private static final long SHOOT_INTERVAL_MS = 350L;
-    private static final long ENEMY_SPAWN_MS = 800L;
     private static final long STATE_PUSH_MS = 80L;
     private static final long INPUT_PUSH_MS = 50L;
+
+    private static final long PLAYER_SHOOT_INTERVAL_MS = 420L;
+    private static final long ENEMY_SPAWN_INTERVAL_MS = 900L;
+    private static final long ENEMY_SHOOT_INTERVAL_MS = 850L;
     private static final long PVP_TIMEOUT_MS = 90_000L;
+
+    private static final float ELITE_ENEMY_PROBABILITY = 0.2f;
+    private static final int ENEMY_KIND_MOB = 0;
+    private static final int ENEMY_KIND_ELITE = 1;
+    private static final int ENEMY_KIND_BOSS = 2;
+
+    private static final int PLAYER_MAX_HP = 100;
+    private static final int PLAYER_BULLET_DAMAGE_PVE = 50;
+    private static final int PLAYER_BULLET_DAMAGE_PVP = 15;
+    private static final int ENEMY_BULLET_DAMAGE = 12;
+    private static final int ENEMY_COLLISION_DAMAGE = 22;
+    private static final int ENEMY_ESCAPE_DAMAGE = 8;
+
+    private static final int PVE_MAX_ENEMIES = 6;
+    private static final int BOSS_SCORE_THRESHOLD = 24;
 
     private final NetworkBattleConfig config;
     private final ExitListener exitListener;
@@ -52,19 +73,21 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
     private final Object stateLock = new Object();
     private final Random random = new Random();
 
-    private final Paint backgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint subTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint hudPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint heroBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint enemyBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint barBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint barBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint overlayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint enemyPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint bulletP0Paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint bulletP1Paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint player0Paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint player1Paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint disabledPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint overlayTitlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint overlayBodyPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint splitLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint playerLabelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final PlayerState[] players = new PlayerState[] {new PlayerState(), new PlayerState()};
-    private final List<BulletState> bullets = new ArrayList<>();
+    private final List<BulletState> playerBullets = new ArrayList<>();
+    private final List<BulletState> enemyBullets = new ArrayList<>();
     private final List<EnemyState> enemies = new ArrayList<>();
 
     private Thread renderThread;
@@ -73,6 +96,7 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
     private int worldWidth;
     private int worldHeight;
     private boolean worldReady = false;
+    private int backGroundTop = 0;
 
     private final boolean host;
     private final boolean pve;
@@ -98,8 +122,12 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
     private long elapsedMs = 0L;
     private long nextShootAt = 0L;
     private long nextEnemySpawnAt = 0L;
+    private long nextEnemyShootAt = 0L;
     private long nextStatePushAt = 0L;
+
     private int sharedScore = 0;
+    private boolean bossSpawned = false;
+    private boolean bossDefeated = false;
 
     public NetworkBattleView(Context context, NetworkBattleConfig config, ExitListener exitListener) {
         super(context);
@@ -147,7 +175,9 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             public void onDisconnected() {
                 if (!gameOver) {
                     disconnected = true;
-                    statusText = string(R.string.network_disconnect);
+                    if (statusText == null || statusText.trim().isEmpty()) {
+                        statusText = string(R.string.network_disconnect);
+                    }
                 }
             }
         });
@@ -157,23 +187,36 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
     private void initPaints() {
         float density = getResources().getDisplayMetrics().density;
 
-        backgroundPaint.setColor(Color.rgb(12, 20, 28));
+        scorePaint.setColor(Color.RED);
+        scorePaint.setTextSize(21f * density);
+        scorePaint.setFakeBoldText(true);
 
-        textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(22f * density);
-        textPaint.setFakeBoldText(true);
+        hudPaint.setColor(Color.WHITE);
+        hudPaint.setTextSize(16f * density);
 
-        subTextPaint.setColor(Color.rgb(220, 228, 240));
-        subTextPaint.setTextSize(16f * density);
+        heroBarPaint.setColor(Color.GREEN);
+        enemyBarPaint.setColor(Color.RED);
+
+        barBgPaint.setColor(Color.DKGRAY);
+        barBorderPaint.setColor(Color.WHITE);
+        barBorderPaint.setStyle(Paint.Style.STROKE);
+        barBorderPaint.setStrokeWidth(Math.max(2f, density));
 
         overlayPaint.setColor(Color.argb(180, 0, 0, 0));
+        overlayTitlePaint.setColor(Color.WHITE);
+        overlayTitlePaint.setTextSize(28f * density);
+        overlayTitlePaint.setFakeBoldText(true);
+        overlayBodyPaint.setColor(Color.WHITE);
+        overlayBodyPaint.setTextSize(18f * density);
 
-        enemyPaint.setColor(Color.rgb(255, 107, 107));
-        bulletP0Paint.setColor(Color.rgb(122, 229, 130));
-        bulletP1Paint.setColor(Color.rgb(110, 193, 255));
-        player0Paint.setColor(Color.rgb(122, 229, 130));
-        player1Paint.setColor(Color.rgb(110, 193, 255));
-        disabledPaint.setColor(Color.GRAY);
+        splitLinePaint.setColor(Color.argb(170, 255, 255, 255));
+        splitLinePaint.setStyle(Paint.Style.STROKE);
+        splitLinePaint.setStrokeWidth(Math.max(2f, density));
+        splitLinePaint.setPathEffect(new DashPathEffect(new float[] {12f, 12f}, 0f));
+
+        playerLabelPaint.setColor(Color.WHITE);
+        playerLabelPaint.setTextSize(14f * density);
+        playerLabelPaint.setFakeBoldText(true);
     }
 
     @Override
@@ -191,6 +234,8 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         synchronized (stateLock) {
             worldWidth = width;
             worldHeight = height;
+            Main.setWindowSize(width, height);
+            ImageManager.init(getContext(), width, height);
             initWorldStateLocked();
             worldReady = true;
         }
@@ -246,26 +291,34 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             players[1].x = worldWidth * 0.5f;
             players[1].y = worldHeight * 0.18f;
         }
-        players[0].hp = 120;
-        players[1].hp = 120;
+
+        players[0].hp = PLAYER_MAX_HP;
+        players[1].hp = PLAYER_MAX_HP;
 
         localInputX = players[localPlayerIndex].x;
         localInputY = players[localPlayerIndex].y;
         remoteInputX = players[remotePlayerIndex].x;
         remoteInputY = players[remotePlayerIndex].y;
+
         inputDirty = true;
         lastSentInputX = Float.NaN;
         lastSentInputY = Float.NaN;
         nextInputPushAt = 0L;
 
-        bullets.clear();
+        playerBullets.clear();
+        enemyBullets.clear();
         enemies.clear();
 
         elapsedMs = 0L;
-        nextShootAt = SHOOT_INTERVAL_MS;
-        nextEnemySpawnAt = ENEMY_SPAWN_MS;
+        nextShootAt = PLAYER_SHOOT_INTERVAL_MS;
+        nextEnemySpawnAt = ENEMY_SPAWN_INTERVAL_MS;
+        nextEnemyShootAt = ENEMY_SHOOT_INTERVAL_MS;
         nextStatePushAt = STATE_PUSH_MS;
+
         sharedScore = 0;
+        backGroundTop = 0;
+        bossSpawned = false;
+        bossDefeated = false;
         gameOver = false;
         resultCode = RESULT_NONE;
     }
@@ -278,16 +331,13 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             return true;
         }
 
-        if (!worldReady) {
+        if (!worldReady || gameOver || disconnected) {
             return true;
         }
 
-        if (gameOver || disconnected) {
-            return true;
-        }
-
-        float x = clamp(event.getX(), 32f, worldWidth - 32f);
+        float x = clamp(event.getX(), heroHalfWidth(), worldWidth - heroHalfWidth());
         float y = clampYForPlayer(localPlayerIndex, event.getY());
+
         localInputX = x;
         localInputY = y;
         inputDirty = true;
@@ -299,13 +349,14 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
     }
 
     private float clampYForPlayer(int playerIndex, float y) {
-        float minY = 32f;
-        float maxY = worldHeight - 32f;
+        float half = heroHalfHeight();
+        float minY = half;
+        float maxY = worldHeight - half;
         if (!pve) {
             if (playerIndex == 0) {
-                minY = worldHeight * 0.5f;
+                minY = worldHeight * 0.5f + half;
             } else {
-                maxY = worldHeight * 0.5f;
+                maxY = worldHeight * 0.5f - half;
             }
         } else {
             minY = worldHeight * 0.42f;
@@ -332,6 +383,7 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         boolean moved = Float.isNaN(lastSentInputX)
                 || Math.abs(lastSentInputX - x) > 0.5f
                 || Math.abs(lastSentInputY - y) > 0.5f;
+
         if (!force && !inputDirty && !moved) {
             nextInputPushAt = now + INPUT_PUSH_MS;
             return;
@@ -343,6 +395,7 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             input.put("x", x);
             input.put("y", y);
             session.send(input);
+
             lastSentInputX = x;
             lastSentInputY = y;
             inputDirty = false;
@@ -353,8 +406,7 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
 
     private void handleNetworkMessage(JSONObject message) {
         if (host) {
-            String type = message.optString("type", "");
-            if (!TYPE_INPUT.equals(type)) {
+            if (!TYPE_INPUT.equals(message.optString("type", ""))) {
                 return;
             }
             remoteInputX = (float) message.optDouble("x", remoteInputX);
@@ -362,8 +414,7 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             return;
         }
 
-        String type = message.optString("type", "");
-        if (!TYPE_STATE.equals(type)) {
+        if (!TYPE_STATE.equals(message.optString("type", ""))) {
             return;
         }
         applyStateFromHost(message);
@@ -375,6 +426,8 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             sharedScore = stateMessage.optInt("score", sharedScore);
             gameOver = stateMessage.optBoolean("gameOver", gameOver);
             resultCode = stateMessage.optString("result", resultCode);
+            bossSpawned = stateMessage.optBoolean("bossSpawned", bossSpawned);
+            bossDefeated = stateMessage.optBoolean("bossDefeated", bossDefeated);
 
             JSONArray playerArray = stateMessage.optJSONArray("players");
             if (playerArray != null && playerArray.length() >= 2) {
@@ -382,11 +435,11 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
                 applyPlayerFromJson(playerArray.optJSONObject(1), players[1]);
             }
 
-            bullets.clear();
-            JSONArray bulletArray = stateMessage.optJSONArray("bullets");
-            if (bulletArray != null) {
-                for (int i = 0; i < bulletArray.length(); i++) {
-                    JSONObject item = bulletArray.optJSONObject(i);
+            playerBullets.clear();
+            JSONArray playerBulletArray = stateMessage.optJSONArray("playerBullets");
+            if (playerBulletArray != null) {
+                for (int i = 0; i < playerBulletArray.length(); i++) {
+                    JSONObject item = playerBulletArray.optJSONObject(i);
                     if (item == null) {
                         continue;
                     }
@@ -396,7 +449,25 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
                     bullet.vx = (float) item.optDouble("vx", 0);
                     bullet.vy = (float) item.optDouble("vy", 0);
                     bullet.owner = item.optInt("owner", 0);
-                    bullets.add(bullet);
+                    playerBullets.add(bullet);
+                }
+            }
+
+            enemyBullets.clear();
+            JSONArray enemyBulletArray = stateMessage.optJSONArray("enemyBullets");
+            if (enemyBulletArray != null) {
+                for (int i = 0; i < enemyBulletArray.length(); i++) {
+                    JSONObject item = enemyBulletArray.optJSONObject(i);
+                    if (item == null) {
+                        continue;
+                    }
+                    BulletState bullet = new BulletState();
+                    bullet.x = (float) item.optDouble("x", 0);
+                    bullet.y = (float) item.optDouble("y", 0);
+                    bullet.vx = (float) item.optDouble("vx", 0);
+                    bullet.vy = (float) item.optDouble("vy", 0);
+                    bullet.owner = -1;
+                    enemyBullets.add(bullet);
                 }
             }
 
@@ -414,6 +485,10 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
                     enemy.vx = (float) item.optDouble("vx", 0);
                     enemy.vy = (float) item.optDouble("vy", 0);
                     enemy.hp = item.optInt("hp", 0);
+                    enemy.maxHp = item.optInt("maxHp", enemy.hp);
+                    enemy.boss = item.optBoolean("boss", false);
+                    enemy.kind = item.optInt("kind", enemy.boss ? ENEMY_KIND_BOSS : ENEMY_KIND_MOB);
+                    enemy.score = item.optInt("score", enemy.boss ? 100 : 10);
                     enemies.add(enemy);
                 }
             }
@@ -433,24 +508,31 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         synchronized (stateLock) {
             elapsedMs += FRAME_MS;
 
-            players[localPlayerIndex].x = clamp(localInputX, 32f, worldWidth - 32f);
+            players[localPlayerIndex].x = clamp(localInputX, heroHalfWidth(), worldWidth - heroHalfWidth());
             players[localPlayerIndex].y = clampYForPlayer(localPlayerIndex, localInputY);
-            players[remotePlayerIndex].x = clamp(remoteInputX, 32f, worldWidth - 32f);
+            players[remotePlayerIndex].x = clamp(remoteInputX, heroHalfWidth(), worldWidth - heroHalfWidth());
             players[remotePlayerIndex].y = clampYForPlayer(remotePlayerIndex, remoteInputY);
 
             if (elapsedMs >= nextShootAt) {
-                spawnBulletsForAlivePlayersLocked();
-                nextShootAt += SHOOT_INTERVAL_MS;
+                spawnPlayerBulletsLocked();
+                nextShootAt += PLAYER_SHOOT_INTERVAL_MS;
             }
 
             if (pve && elapsedMs >= nextEnemySpawnAt) {
                 spawnEnemyLocked();
-                nextEnemySpawnAt += ENEMY_SPAWN_MS;
+                nextEnemySpawnAt += ENEMY_SPAWN_INTERVAL_MS;
             }
 
-            moveBulletsLocked();
+            if (pve && elapsedMs >= nextEnemyShootAt) {
+                spawnEnemyBulletsLocked();
+                nextEnemyShootAt += ENEMY_SHOOT_INTERVAL_MS;
+            }
+
+            movePlayerBulletsLocked();
+            moveEnemyBulletsLocked();
+            moveEnemiesLocked();
+
             if (pve) {
-                moveEnemiesLocked();
                 resolvePveCollisionsLocked();
                 resolvePveResultLocked();
             } else {
@@ -465,7 +547,7 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         }
     }
 
-    private void spawnBulletsForAlivePlayersLocked() {
+    private void spawnPlayerBulletsLocked() {
         for (int i = 0; i < players.length; i++) {
             if (players[i].hp <= 0) {
                 continue;
@@ -473,29 +555,113 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             BulletState bullet = new BulletState();
             bullet.owner = i;
             bullet.x = players[i].x;
-            bullet.y = players[i].y + (i == 0 ? -22f : 22f);
+            bullet.y = players[i].y + (isPlayerFacingUp(i) ? -heroHalfHeight() : heroHalfHeight());
             bullet.vx = 0f;
-            if (pve) {
-                bullet.vy = -16f;
-            } else {
-                bullet.vy = i == 0 ? -16f : 16f;
-            }
-            bullets.add(bullet);
+            bullet.vy = isPlayerFacingUp(i) ? -18f : 18f;
+            playerBullets.add(bullet);
         }
     }
 
     private void spawnEnemyLocked() {
-        EnemyState enemy = new EnemyState();
-        enemy.x = 40f + random.nextFloat() * (worldWidth - 80f);
-        enemy.y = -30f;
-        enemy.vx = random.nextBoolean() ? 1.5f : -1.5f;
-        enemy.vy = 4f + random.nextFloat() * 2.2f;
-        enemy.hp = 45;
+        if (!bossSpawned && sharedScore >= BOSS_SCORE_THRESHOLD) {
+            EnemyState boss = new EnemyState();
+            boss.boss = true;
+            boss.kind = ENEMY_KIND_BOSS;
+            boss.maxHp = 420;
+            boss.hp = boss.maxHp;
+            boss.score = 100;
+            boss.x = worldWidth * 0.5f;
+            boss.y = 120f;
+            boss.vx = 3f;
+            boss.vy = 0.35f;
+            enemies.add(boss);
+            bossSpawned = true;
+            return;
+        }
+
+        if (bossSpawned || enemies.size() >= PVE_MAX_ENEMIES) {
+            return;
+        }
+
+        EnemyState enemy = random.nextFloat() < ELITE_ENEMY_PROBABILITY
+                ? createEliteEnemyState()
+                : createMobEnemyState();
         enemies.add(enemy);
     }
 
-    private void moveBulletsLocked() {
-        bullets.removeIf(b -> {
+    private EnemyState createMobEnemyState() {
+        EnemyState enemy = new EnemyState();
+        enemy.boss = false;
+        enemy.kind = ENEMY_KIND_MOB;
+        enemy.maxHp = 30;
+        enemy.hp = enemy.maxHp;
+        enemy.score = 10;
+        enemy.x = 48f + random.nextFloat() * (worldWidth - 96f);
+        enemy.y = -32f;
+        enemy.vx = 0f;
+        enemy.vy = 10f;
+        return enemy;
+    }
+
+    private EnemyState createEliteEnemyState() {
+        EnemyState enemy = new EnemyState();
+        enemy.boss = false;
+        enemy.kind = ENEMY_KIND_ELITE;
+        enemy.maxHp = 100;
+        enemy.hp = enemy.maxHp;
+        enemy.score = 20;
+        enemy.x = 48f + random.nextFloat() * (worldWidth - 96f);
+        enemy.y = -32f;
+        enemy.vx = 0f;
+        enemy.vy = 5f;
+        return enemy;
+    }
+
+    private void spawnEnemyBulletsLocked() {
+        if (!pve) {
+            return;
+        }
+        for (EnemyState enemy : enemies) {
+            if (enemy.hp <= 0) {
+                continue;
+            }
+            if (enemy.kind == ENEMY_KIND_ELITE) {
+                BulletState bullet = new BulletState();
+                bullet.owner = -1;
+                bullet.x = enemy.x;
+                bullet.y = enemy.y + enemyHalfHeight(enemy) * 0.6f;
+                bullet.vx = 0f;
+                bullet.vy = 15f;
+                enemyBullets.add(bullet);
+            } else if (enemy.kind == ENEMY_KIND_BOSS) {
+                // Boss使用圆形弹幕，接近单机CircleShoot风格
+                int bulletCount = 12;
+                float speed = 6f;
+                double phase = (elapsedMs % 1800L) / 1800.0 * Math.PI * 2.0;
+                for (int i = 0; i < bulletCount; i++) {
+                    double angle = phase + i * (Math.PI * 2.0 / bulletCount);
+                    BulletState bullet = new BulletState();
+                    bullet.owner = -1;
+                    bullet.x = enemy.x;
+                    bullet.y = enemy.y + enemyHalfHeight(enemy) * 0.7f;
+                    bullet.vx = (float) (Math.cos(angle) * speed);
+                    bullet.vy = (float) (Math.sin(angle) * speed);
+                    enemyBullets.add(bullet);
+                }
+            }
+        }
+    }
+
+    private void movePlayerBulletsLocked() {
+        playerBullets.removeIf(b -> {
+            b.x += b.vx;
+            b.y += b.vy;
+            return b.y < -40f || b.y > worldHeight + 40f || b.x < -40f || b.x > worldWidth + 40f;
+        });
+    }
+
+    private void moveEnemyBulletsLocked() {
+        enemyBullets.removeIf(b -> {
             b.x += b.vx;
             b.y += b.vy;
             return b.y < -40f || b.y > worldHeight + 40f || b.x < -40f || b.x > worldWidth + 40f;
@@ -506,31 +672,63 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         enemies.removeIf(enemy -> {
             enemy.x += enemy.vx;
             enemy.y += enemy.vy;
-            if (enemy.x < 20f || enemy.x > worldWidth - 20f) {
+
+            float halfW = enemyHalfWidth(enemy);
+            if (enemy.x < halfW || enemy.x > worldWidth - halfW) {
                 enemy.vx = -enemy.vx;
+                enemy.x = clamp(enemy.x, halfW, worldWidth - halfW);
             }
+
+            if (enemy.boss) {
+                if (enemy.y < 80f || enemy.y > 220f) {
+                    enemy.vy = -enemy.vy;
+                }
+                return enemy.hp <= 0;
+            }
+
             if (enemy.y > worldHeight + 40f) {
-                players[0].hp = Math.max(0, players[0].hp - 10);
-                players[1].hp = Math.max(0, players[1].hp - 10);
+                players[0].hp = Math.max(0, players[0].hp - ENEMY_ESCAPE_DAMAGE);
+                players[1].hp = Math.max(0, players[1].hp - ENEMY_ESCAPE_DAMAGE);
                 return true;
             }
-            return false;
+            return enemy.hp <= 0;
         });
     }
 
     private void resolvePveCollisionsLocked() {
-        List<BulletState> removedBullets = new ArrayList<>();
-        List<EnemyState> removedEnemies = new ArrayList<>();
+        List<BulletState> consumedPlayerBullets = new ArrayList<>();
+        List<BulletState> consumedEnemyBullets = new ArrayList<>();
 
-        for (BulletState bullet : bullets) {
+        for (BulletState bullet : playerBullets) {
+            EnemyState target = null;
             for (EnemyState enemy : enemies) {
-                if (isColliding(bullet.x, bullet.y, 8f, enemy.x, enemy.y, 24f)) {
-                    enemy.hp -= 22;
-                    removedBullets.add(bullet);
-                    if (enemy.hp <= 0) {
-                        removedEnemies.add(enemy);
-                        sharedScore += 1;
-                    }
+                if (isColliding(bullet.x, bullet.y, bulletRadius(), enemy.x, enemy.y, enemyRadius(enemy))) {
+                    target = enemy;
+                    break;
+                }
+            }
+            if (target == null) {
+                continue;
+            }
+
+            target.hp -= PLAYER_BULLET_DAMAGE_PVE;
+            consumedPlayerBullets.add(bullet);
+            if (target.hp <= 0) {
+                sharedScore += target.score;
+                if (target.kind == ENEMY_KIND_BOSS) {
+                    bossDefeated = true;
+                }
+            }
+        }
+
+        for (BulletState bullet : enemyBullets) {
+            for (PlayerState player : players) {
+                if (player.hp <= 0) {
+                    continue;
+                }
+                if (isColliding(bullet.x, bullet.y, bulletRadius(), player.x, player.y, heroRadius())) {
+                    player.hp = Math.max(0, player.hp - ENEMY_BULLET_DAMAGE);
+                    consumedEnemyBullets.add(bullet);
                     break;
                 }
             }
@@ -541,34 +739,35 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
                 if (player.hp <= 0) {
                     continue;
                 }
-                if (isColliding(enemy.x, enemy.y, 24f, player.x, player.y, 22f)) {
-                    player.hp = Math.max(0, player.hp - 30);
-                    removedEnemies.add(enemy);
+                if (isColliding(enemy.x, enemy.y, enemyRadius(enemy), player.x, player.y, heroRadius())) {
+                    player.hp = Math.max(0, player.hp - (enemy.boss ? ENEMY_COLLISION_DAMAGE + 10 : ENEMY_COLLISION_DAMAGE));
+                    enemy.hp = 0;
                     break;
                 }
             }
         }
 
-        bullets.removeAll(removedBullets);
-        enemies.removeAll(removedEnemies);
+        playerBullets.removeAll(consumedPlayerBullets);
+        enemyBullets.removeAll(consumedEnemyBullets);
+        enemies.removeIf(e -> e.hp <= 0);
     }
 
     private void resolvePvpCollisionsLocked() {
-        List<BulletState> removedBullets = new ArrayList<>();
-
-        for (BulletState bullet : bullets) {
+        List<BulletState> consumed = new ArrayList<>();
+        for (BulletState bullet : playerBullets) {
             int targetIndex = bullet.owner == 0 ? 1 : 0;
             PlayerState target = players[targetIndex];
             if (target.hp <= 0) {
                 continue;
             }
-            if (isColliding(bullet.x, bullet.y, 8f, target.x, target.y, 24f)) {
-                target.hp = Math.max(0, target.hp - 12);
-                removedBullets.add(bullet);
+            if (isColliding(bullet.x, bullet.y, bulletRadius(), target.x, target.y, heroRadius())) {
+                target.hp = Math.max(0, target.hp - PLAYER_BULLET_DAMAGE_PVP);
+                consumed.add(bullet);
             }
         }
-
-        bullets.removeAll(removedBullets);
+        playerBullets.removeAll(consumed);
+        enemyBullets.clear();
+        enemies.clear();
     }
 
     private boolean isColliding(float x1, float y1, float r1, float x2, float y2, float r2) {
@@ -582,12 +781,14 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         if (gameOver) {
             return;
         }
-        if (sharedScore >= 25) {
+
+        if (bossDefeated) {
             gameOver = true;
             resultCode = RESULT_PVE_WIN;
             sendHostStateLocked();
             return;
         }
+
         if (players[0].hp <= 0 && players[1].hp <= 0) {
             gameOver = true;
             resultCode = RESULT_PVE_FAIL;
@@ -599,6 +800,7 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         if (gameOver) {
             return;
         }
+
         boolean p0Dead = players[0].hp <= 0;
         boolean p1Dead = players[1].hp <= 0;
 
@@ -620,6 +822,7 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             sendHostStateLocked();
             return;
         }
+
         if (elapsedMs >= PVP_TIMEOUT_MS) {
             gameOver = true;
             if (players[0].hp == players[1].hp) {
@@ -635,6 +838,7 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         if (!host || !connected) {
             return;
         }
+
         JSONObject root = new JSONObject();
         try {
             root.put("type", TYPE_STATE);
@@ -642,23 +846,36 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             root.put("score", sharedScore);
             root.put("gameOver", gameOver);
             root.put("result", resultCode);
+            root.put("bossSpawned", bossSpawned);
+            root.put("bossDefeated", bossDefeated);
 
             JSONArray playerArray = new JSONArray();
             playerArray.put(playerToJson(players[0]));
             playerArray.put(playerToJson(players[1]));
             root.put("players", playerArray);
 
-            JSONArray bulletArray = new JSONArray();
-            for (BulletState bullet : bullets) {
+            JSONArray playerBulletArray = new JSONArray();
+            for (BulletState bullet : playerBullets) {
                 JSONObject item = new JSONObject();
                 item.put("x", bullet.x);
                 item.put("y", bullet.y);
                 item.put("vx", bullet.vx);
                 item.put("vy", bullet.vy);
                 item.put("owner", bullet.owner);
-                bulletArray.put(item);
+                playerBulletArray.put(item);
             }
-            root.put("bullets", bulletArray);
+            root.put("playerBullets", playerBulletArray);
+
+            JSONArray enemyBulletArray = new JSONArray();
+            for (BulletState bullet : enemyBullets) {
+                JSONObject item = new JSONObject();
+                item.put("x", bullet.x);
+                item.put("y", bullet.y);
+                item.put("vx", bullet.vx);
+                item.put("vy", bullet.vy);
+                enemyBulletArray.put(item);
+            }
+            root.put("enemyBullets", enemyBulletArray);
 
             JSONArray enemyArray = new JSONArray();
             for (EnemyState enemy : enemies) {
@@ -668,6 +885,10 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
                 item.put("vx", enemy.vx);
                 item.put("vy", enemy.vy);
                 item.put("hp", enemy.hp);
+                item.put("maxHp", enemy.maxHp);
+                item.put("boss", enemy.boss);
+                item.put("kind", enemy.kind);
+                item.put("score", enemy.score);
                 enemyArray.put(item);
             }
             root.put("enemies", enemyArray);
@@ -689,38 +910,29 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         if (canvas == null) {
             return;
         }
+
         try {
-            canvas.drawRect(0, 0, canvas.getWidth(), canvas.getHeight(), backgroundPaint);
+            drawBackground(canvas);
 
             synchronized (stateLock) {
                 if (!pve) {
                     float mid = worldHeight * 0.5f;
-                    canvas.drawLine(0, mid, worldWidth, mid, subTextPaint);
+                    canvas.drawLine(0, mid, worldWidth, mid, splitLinePaint);
                 }
 
-                for (EnemyState enemy : enemies) {
-                    canvas.drawCircle(enemy.x, enemy.y, 24f, enemyPaint);
-                }
-
-                for (BulletState bullet : bullets) {
-                    Paint paint = bullet.owner == 0 ? bulletP0Paint : bulletP1Paint;
-                    canvas.drawCircle(bullet.x, bullet.y, 8f, paint);
-                }
-
-                drawPlayer(canvas, players[0], 24f, player0Paint);
-                drawPlayer(canvas, players[1], 24f, player1Paint);
-
-                canvas.drawText("P1 HP: " + players[0].hp, 20f, 42f, textPaint);
-                canvas.drawText("P2 HP: " + players[1].hp, 20f, 74f, textPaint);
-                if (pve) {
-                    canvas.drawText("Score: " + sharedScore + " / 25", 20f, 106f, textPaint);
-                } else {
-                    canvas.drawText("Time: " + (elapsedMs / 1000) + "s", 20f, 106f, textPaint);
-                }
+                drawEnemies(canvas);
+                drawBullets(canvas, enemyBullets, ImageManager.ENEMY_BULLET_IMAGE);
+                drawBullets(canvas, playerBullets, ImageManager.HERO_BULLET_IMAGE);
+                drawPlayers(canvas);
+                drawHealthBars(canvas);
+                drawHud(canvas);
             }
 
             if (!connected || disconnected) {
-                drawOverlay(canvas, statusText.isEmpty() ? string(R.string.network_connecting) : statusText, string(R.string.network_retry));
+                String title = statusText == null || statusText.trim().isEmpty()
+                        ? string(R.string.network_connecting)
+                        : statusText;
+                drawOverlay(canvas, title, string(R.string.network_retry));
             } else if (gameOver) {
                 drawOverlay(canvas, getResultTextForLocalPlayer(), string(R.string.network_retry));
             }
@@ -729,19 +941,127 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         }
     }
 
-    private void drawPlayer(Canvas canvas, PlayerState player, float radius, Paint activePaint) {
-        Paint paint = player.hp > 0 ? activePaint : disabledPaint;
-        canvas.drawCircle(player.x, player.y, radius, paint);
+    private void drawBackground(Canvas canvas) {
+        Bitmap background = pve ? ImageManager.BACKGROUND_IMAGE_NORMAL : ImageManager.BACKGROUND_IMAGE_HARD;
+        if (background == null) {
+            canvas.drawColor(Color.BLACK);
+            return;
+        }
+
+        canvas.drawBitmap(background, 0, backGroundTop - worldHeight, null);
+        canvas.drawBitmap(background, 0, backGroundTop, null);
+
+        backGroundTop += 2;
+        if (backGroundTop >= worldHeight) {
+            backGroundTop = 0;
+        }
+    }
+
+    private void drawEnemies(Canvas canvas) {
+        for (EnemyState enemy : enemies) {
+            Bitmap bitmap = enemyBitmap(enemy);
+            if (bitmap == null) {
+                continue;
+            }
+            canvas.drawBitmap(bitmap, enemy.x - bitmap.getWidth() / 2f, enemy.y - bitmap.getHeight() / 2f, null);
+        }
+    }
+
+    private void drawBullets(Canvas canvas, List<BulletState> bullets, Bitmap bulletBitmap) {
+        if (bulletBitmap == null) {
+            return;
+        }
+        for (BulletState bullet : bullets) {
+            canvas.drawBitmap(
+                    bulletBitmap,
+                    bullet.x - bulletBitmap.getWidth() / 2f,
+                    bullet.y - bulletBitmap.getHeight() / 2f,
+                    null
+            );
+        }
+    }
+
+    private void drawPlayers(Canvas canvas) {
+        Bitmap hero = ImageManager.HERO_IMAGE;
+        if (hero == null) {
+            return;
+        }
+
+        for (int i = 0; i < players.length; i++) {
+            PlayerState player = players[i];
+            Paint paint = null;
+            if (player.hp <= 0) {
+                paint = new Paint();
+                paint.setAlpha(110);
+            }
+            canvas.drawBitmap(hero, player.x - hero.getWidth() / 2f, player.y - hero.getHeight() / 2f, paint);
+            String label = i == 0 ? "P1" : "P2";
+            canvas.drawText(label, player.x - playerLabelPaint.measureText(label) / 2f, player.y - hero.getHeight() / 2f - 8f, playerLabelPaint);
+        }
+    }
+
+    private void drawHealthBars(Canvas canvas) {
+        Bitmap hero = ImageManager.HERO_IMAGE;
+        int heroBarWidth = hero == null ? 50 : hero.getWidth();
+        int barHeight = Math.max(6, Math.round(getResources().getDisplayMetrics().density * 4));
+
+        for (PlayerState player : players) {
+            drawHealthBar(canvas, player.x - heroBarWidth / 2f, player.y + heroHalfHeight() + 8f,
+                    heroBarWidth, barHeight, player.hp, PLAYER_MAX_HP, heroBarPaint);
+        }
+
+        for (EnemyState enemy : enemies) {
+            int enemyBarWidth = enemy.boss
+                    ? (ImageManager.BOSS_ENEMY_IMAGE == null ? 80 : ImageManager.BOSS_ENEMY_IMAGE.getWidth())
+                    : (enemy.kind == ENEMY_KIND_ELITE
+                    ? (ImageManager.ELITE_ENEMY_IMAGE == null ? 56 : ImageManager.ELITE_ENEMY_IMAGE.getWidth())
+                    : (ImageManager.MOB_ENEMY_IMAGE == null ? 56 : ImageManager.MOB_ENEMY_IMAGE.getWidth()));
+            drawHealthBar(canvas, enemy.x - enemyBarWidth / 2f, enemy.y + enemyHalfHeight(enemy) + 6f,
+                    enemyBarWidth, barHeight, enemy.hp, enemy.maxHp, enemyBarPaint);
+        }
+    }
+
+    private void drawHealthBar(Canvas canvas,
+                               float x,
+                               float y,
+                               int width,
+                               int height,
+                               int hp,
+                               int maxHp,
+                               Paint foreground) {
+        if (maxHp <= 0) {
+            return;
+        }
+
+        float ratio = Math.max(0f, Math.min(1f, hp / (float) maxHp));
+        canvas.drawRect(x, y, x + width, y + height, barBgPaint);
+        canvas.drawRect(x, y, x + width * ratio, y + height, foreground);
+        canvas.drawRect(x, y, x + width, y + height, barBorderPaint);
+    }
+
+    private void drawHud(Canvas canvas) {
+        canvas.drawText("SCORE: " + sharedScore, 16f, 40f, scorePaint);
+        canvas.drawText("P1 HP: " + players[0].hp + "   P2 HP: " + players[1].hp, 16f, 72f, scorePaint);
+
+        if (pve) {
+            String target = bossDefeated ? "Boss defeated" : (bossSpawned ? "Boss battle" : "Clear mobs to summon Boss");
+            canvas.drawText(target, 16f, 102f, hudPaint);
+        } else {
+            long remain = Math.max(0L, (PVP_TIMEOUT_MS - elapsedMs) / 1000L);
+            canvas.drawText("PVP Time: " + remain + "s", 16f, 102f, hudPaint);
+        }
     }
 
     private void drawOverlay(Canvas canvas, String title, String subtitle) {
         canvas.drawRect(0, 0, worldWidth, worldHeight, overlayPaint);
-        float centerX = worldWidth * 0.5f;
-        float centerY = worldHeight * 0.5f;
-        float titleWidth = textPaint.measureText(title);
-        float subtitleWidth = subTextPaint.measureText(subtitle);
-        canvas.drawText(title, centerX - titleWidth / 2f, centerY, textPaint);
-        canvas.drawText(subtitle, centerX - subtitleWidth / 2f, centerY + 56f, subTextPaint);
+        float centerX = worldWidth / 2f;
+        float centerY = worldHeight / 2f;
+
+        float titleWidth = overlayTitlePaint.measureText(title);
+        canvas.drawText(title, centerX - titleWidth / 2f, centerY, overlayTitlePaint);
+
+        float subWidth = overlayBodyPaint.measureText(subtitle);
+        canvas.drawText(subtitle, centerX - subWidth / 2f, centerY + 56f, overlayBodyPaint);
     }
 
     private String getResultTextForLocalPlayer() {
@@ -761,6 +1081,53 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             return localPlayerIndex == 1 ? string(R.string.network_result_win) : string(R.string.network_result_lose);
         }
         return string(R.string.network_connecting);
+    }
+
+    private boolean isPlayerFacingUp(int playerIndex) {
+        return pve || playerIndex == 0;
+    }
+
+    private float heroHalfWidth() {
+        Bitmap hero = ImageManager.HERO_IMAGE;
+        return hero == null ? 24f : hero.getWidth() / 2f;
+    }
+
+    private float heroHalfHeight() {
+        Bitmap hero = ImageManager.HERO_IMAGE;
+        return hero == null ? 24f : hero.getHeight() / 2f;
+    }
+
+    private float heroRadius() {
+        return Math.min(heroHalfWidth(), heroHalfHeight()) * 0.8f;
+    }
+
+    private float bulletRadius() {
+        Bitmap bullet = ImageManager.HERO_BULLET_IMAGE;
+        return bullet == null ? 8f : Math.max(4f, Math.min(bullet.getWidth(), bullet.getHeight()) * 0.4f);
+    }
+
+    private float enemyHalfWidth(EnemyState enemy) {
+        Bitmap bitmap = enemyBitmap(enemy);
+        return bitmap == null ? 24f : bitmap.getWidth() / 2f;
+    }
+
+    private float enemyHalfHeight(EnemyState enemy) {
+        Bitmap bitmap = enemyBitmap(enemy);
+        return bitmap == null ? 24f : bitmap.getHeight() / 2f;
+    }
+
+    private Bitmap enemyBitmap(EnemyState enemy) {
+        if (enemy.kind == ENEMY_KIND_BOSS || enemy.boss) {
+            return ImageManager.BOSS_ENEMY_IMAGE;
+        }
+        if (enemy.kind == ENEMY_KIND_ELITE) {
+            return ImageManager.ELITE_ENEMY_IMAGE;
+        }
+        return ImageManager.MOB_ENEMY_IMAGE;
+    }
+
+    private float enemyRadius(EnemyState enemy) {
+        return Math.min(enemyHalfWidth(enemy), enemyHalfHeight(enemy)) * (enemy.boss ? 0.78f : 0.72f);
     }
 
     private String string(int resId) {
@@ -799,5 +1166,9 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         float vx;
         float vy;
         int hp;
+        int maxHp;
+        boolean boss;
+        int kind;
+        int score;
     }
 }
