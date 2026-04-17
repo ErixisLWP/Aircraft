@@ -2,6 +2,7 @@ package edu.hitsz.network;
 
 import android.os.Build;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -88,6 +89,8 @@ public class NetworkPeerSession {
             client.connect(new InetSocketAddress(hostAddress, config.getPort()), 8000);
             socket = client;
         }
+        socket.setTcpNoDelay(true);
+        socket.setKeepAlive(true);
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
         writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
     }
@@ -128,8 +131,12 @@ public class NetworkPeerSession {
             if (line.trim().isEmpty()) {
                 continue;
             }
-            JSONObject message = new JSONObject(line);
-            listener.onMessage(message);
+            try {
+                JSONObject message = new JSONObject(line);
+                listener.onMessage(message);
+            } catch (JSONException ignored) {
+                // Ignore malformed packets and keep the session alive.
+            }
         }
     }
 
@@ -143,7 +150,8 @@ public class NetworkPeerSession {
                 writer.newLine();
                 writer.flush();
             } catch (IOException e) {
-                listener.onError("Send failed");
+                String reason = e.getMessage() == null ? "Send failed" : "Send failed: " + e.getMessage();
+                listener.onError(reason);
                 close();
             }
         }

@@ -41,6 +41,7 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
     private static final long SHOOT_INTERVAL_MS = 350L;
     private static final long ENEMY_SPAWN_MS = 800L;
     private static final long STATE_PUSH_MS = 80L;
+    private static final long INPUT_PUSH_MS = 50L;
     private static final long PVP_TIMEOUT_MS = 90_000L;
 
     private final NetworkBattleConfig config;
@@ -86,6 +87,10 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
     private volatile float localInputY;
     private volatile float remoteInputX;
     private volatile float remoteInputY;
+    private volatile long nextInputPushAt = 0L;
+    private volatile boolean inputDirty = true;
+    private volatile float lastSentInputX = Float.NaN;
+    private volatile float lastSentInputY = Float.NaN;
 
     private volatile String statusText;
     private volatile String resultCode = RESULT_NONE;
@@ -119,7 +124,8 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
                 connected = true;
                 disconnected = false;
                 statusText = "";
-                sendLocalInput();
+                inputDirty = true;
+                maybeSendClientInput(true);
             }
 
             @Override
@@ -130,7 +136,11 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             @Override
             public void onError(String message) {
                 disconnected = true;
-                statusText = string(R.string.network_disconnect);
+                if (message == null || message.trim().isEmpty()) {
+                    statusText = string(R.string.network_disconnect);
+                } else {
+                    statusText = message;
+                }
             }
 
             @Override
@@ -198,6 +208,8 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
             long frameStart = SystemClock.uptimeMillis();
             if (connected && host && worldReady && !gameOver) {
                 updateHostGame();
+            } else if (connected && !host && worldReady && !gameOver && !disconnected) {
+                maybeSendClientInput(false);
             }
             drawFrame();
             long elapsed = SystemClock.uptimeMillis() - frameStart;
@@ -241,6 +253,10 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         localInputY = players[localPlayerIndex].y;
         remoteInputX = players[remotePlayerIndex].x;
         remoteInputY = players[remotePlayerIndex].y;
+        inputDirty = true;
+        lastSentInputX = Float.NaN;
+        lastSentInputY = Float.NaN;
+        nextInputPushAt = 0L;
 
         bullets.clear();
         enemies.clear();
@@ -274,9 +290,10 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         float y = clampYForPlayer(localPlayerIndex, event.getY());
         localInputX = x;
         localInputY = y;
+        inputDirty = true;
 
         if (!host) {
-            sendLocalInput();
+            maybeSendClientInput(false);
         }
         return true;
     }
@@ -300,16 +317,36 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
         return Math.max(min, Math.min(max, value));
     }
 
-    private void sendLocalInput() {
-        if (!connected || host || !worldReady) {
+    private void maybeSendClientInput(boolean force) {
+        if (!connected || host || !worldReady || disconnected) {
             return;
         }
+
+        long now = SystemClock.uptimeMillis();
+        if (!force && now < nextInputPushAt) {
+            return;
+        }
+
+        float x = localInputX;
+        float y = localInputY;
+        boolean moved = Float.isNaN(lastSentInputX)
+                || Math.abs(lastSentInputX - x) > 0.5f
+                || Math.abs(lastSentInputY - y) > 0.5f;
+        if (!force && !inputDirty && !moved) {
+            nextInputPushAt = now + INPUT_PUSH_MS;
+            return;
+        }
+
         JSONObject input = new JSONObject();
         try {
             input.put("type", TYPE_INPUT);
-            input.put("x", localInputX);
-            input.put("y", localInputY);
+            input.put("x", x);
+            input.put("y", y);
             session.send(input);
+            lastSentInputX = x;
+            lastSentInputY = y;
+            inputDirty = false;
+            nextInputPushAt = now + INPUT_PUSH_MS;
         } catch (JSONException ignored) {
         }
     }
