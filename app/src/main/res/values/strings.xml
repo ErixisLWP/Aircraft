@@ -21,12 +21,6 @@
     <string name="network_emulator_mode_tip_short">虚拟机模式已启用：客户端将使用 10.0.2.2</string>
     <string name="network_host_hint">房主IP（局域网如 192.168.1.10，虚拟机常用 10.0.2.2）</string>
     <string name="network_port_hint">端口（默认 24567）</string>
-    <string name="network_discovered_hosts_label">局域网房主列表</string>
-    <string name="network_scan_hosts">扫描局域网房主</string>
-    <string name="network_scanning">正在扫描局域网房主...</string>
-    <string name="network_scan_no_hosts">未发现可连接的房主</string>
-    <string name="network_scan_found_count">已发现 %1$d 个房主</string>
-    <string name="network_scan_failed">扫描失败，请稍后重试</string>
     <string name="network_confirm">开始联机</string>
     <string name="network_invalid_port">端口必须在 1024-65535 之间</string>
     <string name="network_host_required">请输入房主IP</string>

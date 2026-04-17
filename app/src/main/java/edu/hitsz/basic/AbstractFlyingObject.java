@@ -67,6 +67,10 @@ public abstract class AbstractFlyingObject {
         return speedY;
     }
 
+    public int getSpeedX() {
+        return speedX;
+    }
+
     public Bitmap getImage() {
         if (image == null) {
             image = ImageManager.get(this);

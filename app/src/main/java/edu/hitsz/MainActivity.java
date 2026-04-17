@@ -2,16 +2,11 @@ package edu.hitsz;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,12 +15,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import edu.hitsz.application.AudioManager;
 import edu.hitsz.application.Game;
-import edu.hitsz.network.LanHostDiscovery;
 import edu.hitsz.network.NetworkBattleActivity;
 
 public class MainActivity extends AppCompatActivity implements Game.GameStateListener {
@@ -70,34 +61,6 @@ public class MainActivity extends AppCompatActivity implements Game.GameStateLis
         TextView emulatorTipText = dialogView.findViewById(R.id.networkEmulatorTipText);
         EditText hostInput = dialogView.findViewById(R.id.networkHostInput);
         EditText portInput = dialogView.findViewById(R.id.networkPortInput);
-        TextView discoveredHostsLabel = dialogView.findViewById(R.id.networkDiscoveredHostsLabel);
-        Spinner hostSpinner = dialogView.findViewById(R.id.networkHostSpinner);
-        Button scanButton = dialogView.findViewById(R.id.networkScanButton);
-        TextView scanStatusText = dialogView.findViewById(R.id.networkScanStatusText);
-
-        List<LanHostDiscovery.HostInfo> discoveredHosts = new ArrayList<>();
-        ArrayAdapter<String> hostAdapter = new ArrayAdapter<>(
-                this,
-                android.R.layout.simple_spinner_item,
-                new ArrayList<>()
-        );
-        hostAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        hostSpinner.setAdapter(hostAdapter);
-
-        final LanHostDiscovery.ScanHandle[] scanHandle = new LanHostDiscovery.ScanHandle[1];
-
-        hostSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position >= 0 && position < discoveredHosts.size()) {
-                    hostInput.setText(discoveredHosts.get(position).ipAddress);
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
 
         Runnable applyRoleUiState = () -> {
             boolean isHost = roleGroup.getCheckedRadioButtonId() == R.id.networkRoleHost;
@@ -110,20 +73,7 @@ public class MainActivity extends AppCompatActivity implements Game.GameStateLis
                 hostInput.setText(EMULATOR_HOST);
             }
 
-            int clientOnlyVisibility = (!isHost && !emulatorMode) ? View.VISIBLE : View.GONE;
-            discoveredHostsLabel.setVisibility(clientOnlyVisibility);
-            hostSpinner.setVisibility(clientOnlyVisibility);
-            scanButton.setVisibility(clientOnlyVisibility);
-            scanStatusText.setVisibility(clientOnlyVisibility);
-
             emulatorTipText.setVisibility((emulatorMode && !isHost) ? View.VISIBLE : View.GONE);
-            if (emulatorMode) {
-                scanStatusText.setText(R.string.network_emulator_mode_tip_short);
-            }
-
-            if (isHost) {
-                scanStatusText.setText("");
-            }
         };
 
         roleGroup.setOnCheckedChangeListener((group, checkedId) -> {
@@ -133,84 +83,11 @@ public class MainActivity extends AppCompatActivity implements Game.GameStateLis
         roleHostButton.setChecked(true);
         applyRoleUiState.run();
 
-        scanButton.setOnClickListener(v -> {
-            int scanPort;
-            try {
-                String portText = portInput.getText() == null ? "" : portInput.getText().toString().trim();
-                scanPort = portText.isEmpty() ? DEFAULT_NETWORK_PORT : Integer.parseInt(portText);
-            } catch (NumberFormatException e) {
-                Toast.makeText(this, R.string.network_invalid_port, Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            if (scanPort < 1024 || scanPort > 65535) {
-                Toast.makeText(this, R.string.network_invalid_port, Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            if (scanHandle[0] != null) {
-                scanHandle[0].cancel();
-            }
-
-            discoveredHosts.clear();
-            hostAdapter.clear();
-            scanStatusText.setText(R.string.network_scanning);
-            scanButton.setEnabled(false);
-
-            scanHandle[0] = LanHostDiscovery.scanHosts(
-                    scanPort,
-                    LanHostDiscovery.DEFAULT_SCAN_DURATION_MS,
-                    new LanHostDiscovery.ScanListener() {
-                        @Override
-                        public void onHostFound(LanHostDiscovery.HostInfo hostInfo) {
-                            runOnUiThread(() -> {
-                                discoveredHosts.add(hostInfo);
-                                hostAdapter.add(hostInfo.toDisplayText());
-                                hostAdapter.notifyDataSetChanged();
-                                if (TextUtils.isEmpty(hostInput.getText())) {
-                                    hostInput.setText(hostInfo.ipAddress);
-                                }
-                            });
-                        }
-
-                        @Override
-                        public void onScanFinished() {
-                            runOnUiThread(() -> {
-                                scanButton.setEnabled(true);
-                                if (discoveredHosts.isEmpty()) {
-                                    scanStatusText.setText(R.string.network_scan_no_hosts);
-                                } else {
-                                    scanStatusText.setText(getString(R.string.network_scan_found_count, discoveredHosts.size()));
-                                }
-                            });
-                        }
-
-                        @Override
-                        public void onScanError(String message) {
-                            runOnUiThread(() -> {
-                                scanButton.setEnabled(true);
-                                scanStatusText.setText(
-                                        TextUtils.isEmpty(message)
-                                                ? getString(R.string.network_scan_failed)
-                                                : getString(R.string.network_scan_failed) + "：" + message
-                                );
-                            });
-                        }
-                    }
-            );
-        });
-
         builder.setView(dialogView);
         builder.setNegativeButton(android.R.string.cancel, null);
         builder.setPositiveButton(R.string.network_confirm, null);
 
         AlertDialog dialog = builder.create();
-        dialog.setOnDismissListener(d -> {
-            if (scanHandle[0] != null) {
-                scanHandle[0].cancel();
-                scanHandle[0] = null;
-            }
-        });
 
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             boolean isPve = modeGroup.getCheckedRadioButtonId() == R.id.networkModePve;
@@ -234,10 +111,6 @@ public class MainActivity extends AppCompatActivity implements Game.GameStateLis
             String host = hostInput.getText() == null ? "" : hostInput.getText().toString().trim();
             if (!isHost && emulatorMode) {
                 host = EMULATOR_HOST;
-            }
-            if (!isHost && !discoveredHosts.isEmpty() && hostSpinner.getSelectedItemPosition() >= 0
-                    && hostSpinner.getSelectedItemPosition() < discoveredHosts.size()) {
-                host = discoveredHosts.get(hostSpinner.getSelectedItemPosition()).ipAddress;
             }
 
             if (!isHost && host.isEmpty()) {

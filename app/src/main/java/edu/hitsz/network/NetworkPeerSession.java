@@ -39,7 +39,6 @@ public class NetworkPeerSession {
     private Socket socket;
     private BufferedReader reader;
     private BufferedWriter writer;
-    private LanHostDiscovery.HostResponder hostResponder;
 
     public NetworkPeerSession(NetworkBattleConfig config, Listener listener) {
         this.config = config;
@@ -66,7 +65,6 @@ public class NetworkPeerSession {
             }
         } finally {
             running = false;
-            stopHostDiscoveryResponder();
             closeQuietly(reader);
             closeQuietly(writer);
             closeQuietly(socket);
@@ -77,12 +75,10 @@ public class NetworkPeerSession {
 
     private void establishConnection() throws IOException {
         if (config.isHost()) {
-            startHostDiscoveryResponder();
             serverSocket = new ServerSocket();
             serverSocket.setReuseAddress(true);
             serverSocket.bind(new InetSocketAddress(config.getPort()));
             socket = serverSocket.accept();
-            stopHostDiscoveryResponder();
         } else {
             String hostAddress = resolveHostAddress(config.getHostAddress(), config.isEmulatorMode());
             Socket client = new Socket();
@@ -153,35 +149,18 @@ public class NetworkPeerSession {
                 String reason = e.getMessage() == null ? "Send failed" : "Send failed: " + e.getMessage();
                 listener.onError(reason);
                 close();
+            } catch (RuntimeException e) {
+                String reason = e.getMessage() == null ? "Send runtime failure" : "Send runtime failure: " + e.getMessage();
+                listener.onError(reason);
+                close();
             }
         }
     }
 
     public void close() {
         running = false;
-        stopHostDiscoveryResponder();
         closeQuietly(socket);
         closeQuietly(serverSocket);
-    }
-
-    private void startHostDiscoveryResponder() {
-        if (hostResponder != null) {
-            return;
-        }
-        try {
-            hostResponder = new LanHostDiscovery.HostResponder(config.getPort(), config.getMode().name());
-            hostResponder.start();
-        } catch (IOException ignored) {
-            hostResponder = null;
-        }
-    }
-
-    private void stopHostDiscoveryResponder() {
-        if (hostResponder == null) {
-            return;
-        }
-        hostResponder.close();
-        hostResponder = null;
     }
 
     private void closeQuietly(Closeable closeable) {

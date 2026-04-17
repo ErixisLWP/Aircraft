@@ -12,20 +12,18 @@ import android.view.SurfaceView;
 
 import androidx.annotation.NonNull;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import edu.hitsz.Factories.BossEnemyCreator;
-import edu.hitsz.Factories.EliteEnemyCreator;
-import edu.hitsz.Factories.ElitePlusEnemyCreator;
-import edu.hitsz.Factories.EnemyCreator;
-import edu.hitsz.Factories.MobEnemyCreator;
 import edu.hitsz.aircraft.AbstractAircraft;
 import edu.hitsz.aircraft.BossEnemy;
 import edu.hitsz.aircraft.Enemy;
 import edu.hitsz.aircraft.HeroAircraft;
 import edu.hitsz.basic.AbstractFlyingObject;
 import edu.hitsz.bullet.BaseBullet;
+import edu.hitsz.application.core.CombatResolutionCore;
+import edu.hitsz.application.core.EnemyBattleCore;
 import edu.hitsz.prop.BaseProp;
 import edu.hitsz.strategy.NormalShootStrategy;
 import edu.hitsz.template.GameTemplateMethod;
@@ -65,7 +63,6 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
     private float eliteEnemyProbability = 0.2f;
     private float elitePlusEnemyProbability = 0.05f;
     private int bossThreshold = 1000;
-    private int bossAppearCount = 0;
     private int time = 0;
     private int cycleDuration = 600;
     private int cycleTime = 0;
@@ -81,12 +78,13 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
     private final GameStateListener gameStateListener;
 
     private HeroAircraft heroAircraft;
-    private final List<AbstractAircraft> enemyAircrafts = new LinkedList<>();
+    private final List<Enemy> enemyAircrafts = new LinkedList<>();
     private final List<BaseBullet> heroBullets = new LinkedList<>();
     private final List<BaseBullet> enemyBullets = new LinkedList<>();
     private final List<BaseProp> props = new LinkedList<>();
 
-    public EnemyCreator enemyCreator;
+    private final CombatResolutionCore combatResolutionCore = new CombatResolutionCore();
+    private final EnemyBattleCore enemyBattleCore = new EnemyBattleCore();
     public ObserverManager observerManager;
     GameTemplateMethod gameTemplateMethod;
 
@@ -203,7 +201,7 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
         props.clear();
         score = 0;
         backGroundTop = 0;
-        bossAppearCount = 0;
+        enemyBattleCore.reset();
         time = 0;
         cycleTime = 0;
         enemyCycleTime = 0;
@@ -297,37 +295,24 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
         postDelayed(gameStateListener::onGameOver, 1400);
     }
     private void createNewEnemy() {
-        Enemy enemy = null;
-        double randomNum = Math.random();
-        if (enemyAircrafts.size() < enemyMaxNumber) {
-            if (randomNum < elitePlusEnemyProbability) {
-                enemyCreator = new ElitePlusEnemyCreator();
-                enemy = enemyCreator.createEnemy();
-            } else if (randomNum < eliteEnemyProbability + elitePlusEnemyProbability) {
-                enemyCreator = new EliteEnemyCreator();
-                enemy = enemyCreator.createEnemy();
-            } else {
-                enemyCreator = new MobEnemyCreator();
-                enemy = enemyCreator.createEnemy();
-            }
-        }
-        if (enemy != null) {
-            enemyAircrafts.add(enemy);
+        EnemyBattleCore.SpawnResult spawnResult = enemyBattleCore.spawnEnemies(
+                enemyAircrafts,
+                score,
+                enemyMaxNumber,
+                eliteEnemyProbability,
+                elitePlusEnemyProbability,
+                bossThreshold
+        );
+        for (Enemy enemy : spawnResult.getSpawnedEnemies()) {
             observerManager.registerAircraftObserver(enemy);
         }
-
-        if (score / bossThreshold > bossAppearCount && !hasActiveBoss()) {
+        if (spawnResult.isBossSpawned()) {
             AudioManager.playBossBgm();
-            enemyCreator = new BossEnemyCreator();
-            Enemy bossEnemy = enemyCreator.createEnemy();
-            enemyAircrafts.add(bossEnemy);
-            observerManager.registerAircraftObserver(bossEnemy);
-            bossAppearCount++;
         }
     }
 
     private boolean hasActiveBoss() {
-        for (AbstractAircraft enemyAircraft : enemyAircrafts) {
+        for (Enemy enemyAircraft : enemyAircrafts) {
             if (enemyAircraft instanceof BossEnemy && !enemyAircraft.notValid()) {
                 return true;
             }
@@ -371,12 +356,10 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
     }
 
     private void enemyShootAction() {
-        for (AbstractAircraft enemy : enemyAircrafts) {
-            List<BaseBullet> bullets = enemy.shoot();
-            if (!bullets.isEmpty()) {
-                enemyBullets.addAll(bullets);
-                observerManager.registerBulletObserver(bullets);
-            }
+        int beforeSize = enemyBullets.size();
+        enemyBattleCore.appendEnemyBullets(enemyAircrafts, enemyBullets);
+        if (enemyBullets.size() > beforeSize) {
+            observerManager.registerBulletObserver(new ArrayList<>(enemyBullets.subList(beforeSize, enemyBullets.size())));
         }
     }
 
@@ -401,7 +384,7 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
     }
 
     private void aircraftsMoveAction() {
-        for (AbstractAircraft enemyAircraft : enemyAircrafts) {
+        for (Enemy enemyAircraft : enemyAircrafts) {
             enemyAircraft.forward();
         }
     }
@@ -424,27 +407,24 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
             }
         }
 
-        for (BaseBullet bullet : heroBullets) {
-            if (bullet.notValid()) {
+        CombatResolutionCore.BulletEnemyCollisionResult bulletEnemyResult =
+                combatResolutionCore.collidePlayerBulletsWithEnemies(
+                        heroBullets,
+                        enemyAircrafts,
+                        enemy -> enemy.dropProp(props, enemy.getLocationX(), enemy.getLocationY())
+                );
+        if (bulletEnemyResult.getHitCount() > 0) {
+            AudioManager.playBulletHitSound();
+        }
+        score += bulletEnemyResult.getScoreGain();
+
+        for (Enemy enemyAircraft : enemyAircrafts) {
+            if (enemyAircraft.notValid()) {
                 continue;
             }
-            for (AbstractAircraft enemyAircraft : enemyAircrafts) {
-                if (enemyAircraft.notValid()) {
-                    continue;
-                }
-                if (enemyAircraft.crash(bullet)) {
-                    AudioManager.playBulletHitSound();
-                    enemyAircraft.decreaseHp(bullet.getPower());
-                    bullet.vanish();
-                    if (enemyAircraft.notValid()) {
-                        score += ((Enemy) enemyAircraft).getScore();
-                        ((Enemy) enemyAircraft).dropProp(props, enemyAircraft.getLocationX(), enemyAircraft.getLocationY());
-                    }
-                }
-                if (enemyAircraft.crash(heroAircraft) || heroAircraft.crash(enemyAircraft)) {
-                    enemyAircraft.vanish();
-                    heroAircraft.decreaseHp(Integer.MAX_VALUE);
-                }
+            if (enemyAircraft.crash(heroAircraft) || heroAircraft.crash(enemyAircraft)) {
+                enemyAircraft.vanish();
+                heroAircraft.decreaseHp(Integer.MAX_VALUE);
             }
         }
 
@@ -517,7 +497,7 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback, Runnabl
     }
 
     private void drawHealthBarsForEnemies(Canvas canvas) {
-        for (AbstractAircraft enemy : enemyAircrafts) {
+        for (Enemy enemy : enemyAircrafts) {
             if (!enemy.notValid()) {
                 drawHealthBar(canvas, enemy, enemyBarPaint);
             }
