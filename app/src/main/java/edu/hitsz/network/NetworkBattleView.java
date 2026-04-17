@@ -650,7 +650,18 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
                 paint = new Paint();
                 paint.setAlpha(110);
             }
-            canvas.drawBitmap(hero, player.x - hero.getWidth() / 2f, player.y - hero.getHeight() / 2f, paint);
+            float left = player.x - hero.getWidth() / 2f;
+            float top = player.y - hero.getHeight() / 2f;
+            if (!pve && i == 1) {
+                // In PVP, P2 should visually face downward.
+                canvas.save();
+                canvas.translate(0f, player.y * 2f);
+                canvas.scale(1f, -1f);
+                canvas.drawBitmap(hero, left, top, paint);
+                canvas.restore();
+            } else {
+                canvas.drawBitmap(hero, left, top, paint);
+            }
             String label = i == 0 ? "P1" : "P2";
             canvas.drawText(label, player.x - playerLabelPaint.measureText(label) / 2f, player.y - hero.getHeight() / 2f - 8f, playerLabelPaint);
         }

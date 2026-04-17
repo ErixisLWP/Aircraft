@@ -31,8 +31,13 @@ final class NetworkHostBattleController {
 
     private static final int PLAYER_BULLET_DAMAGE_PVE = 50;
     private static final int PLAYER_BULLET_DAMAGE_PVP = 15;
+    private static final int REINFORCEMENT_HP = 40;
+    private static final int REINFORCEMENT_BULLET_DAMAGE = 10;
     private static final int ENEMY_COLLISION_DAMAGE = 22;
     private static final int ENEMY_ESCAPE_DAMAGE = 8;
+    private static final int PVP_REINFORCEMENT_TRIGGER_HP = 35;
+    private static final long PVP_REINFORCEMENT_SHOOT_INTERVAL_MS = 700L;
+    private static final float PVP_REINFORCEMENT_SPEED_Y = 2.6f;
 
     private static final int PVE_MAX_ENEMIES = 6;
     private static final int BOSS_SCORE_THRESHOLD = 24;
@@ -44,6 +49,7 @@ final class NetworkHostBattleController {
     private final List<BaseBullet> playerBulletEntities = new ArrayList<>();
     private final List<Enemy> enemyEntities = new ArrayList<>();
     private final List<BaseBullet> enemyBulletEntities = new ArrayList<>();
+    private final List<PvpReinforcement> pvpReinforcements = new ArrayList<>();
 
     private long elapsedMs = 0L;
     private long nextShootAt = 0L;
@@ -53,6 +59,7 @@ final class NetworkHostBattleController {
     private int sharedScore = 0;
     private boolean bossSpawned = false;
     private boolean bossDefeated = false;
+    private boolean[] reinforcementSummoned = new boolean[] {false, false};
 
     NetworkHostBattleController(boolean pve) {
         this.pve = pve;
@@ -62,6 +69,7 @@ final class NetworkHostBattleController {
         playerBulletEntities.clear();
         enemyEntities.clear();
         enemyBulletEntities.clear();
+        pvpReinforcements.clear();
 
         elapsedMs = 0L;
         nextShootAt = PLAYER_SHOOT_INTERVAL_MS;
@@ -71,6 +79,8 @@ final class NetworkHostBattleController {
         sharedScore = 0;
         bossSpawned = false;
         bossDefeated = false;
+        reinforcementSummoned[0] = false;
+        reinforcementSummoned[1] = false;
         enemyBattleCore.reset();
     }
 
@@ -121,6 +131,12 @@ final class NetworkHostBattleController {
         if (pve && elapsedMs >= nextEnemyShootAt) {
             enemyBattleCore.appendEnemyBullets(enemyEntities, enemyBulletEntities);
             nextEnemyShootAt += ENEMY_SHOOT_INTERVAL_MS;
+        }
+
+        if (!pve) {
+            maybeSummonPvpReinforcements(players, worldWidth, worldHeight, heroHalfWidth, heroHalfHeight);
+            movePvpReinforcements(worldWidth, worldHeight);
+            shootPvpReinforcementBullets(heroHalfHeight);
         }
 
         movePlayerBullets();
@@ -242,6 +258,13 @@ final class NetworkHostBattleController {
             int owner = bullet.getSpeedY() < 0 ? 0 : 1;
             int targetIndex = owner == 0 ? 1 : 0;
             PlayerState target = players[targetIndex];
+
+            if (damageOpposingReinforcementIfHit(bullet, owner, bulletRadius)) {
+                bullet.vanish();
+                consumed.add(bullet);
+                continue;
+            }
+
             if (target.hp <= 0) {
                 continue;
             }
@@ -251,6 +274,23 @@ final class NetworkHostBattleController {
                 consumed.add(bullet);
             }
         }
+
+        for (PvpReinforcement reinforcement : pvpReinforcements) {
+            if (reinforcement.hp <= 0) {
+                continue;
+            }
+            int targetIndex = reinforcement.owner == 0 ? 1 : 0;
+            PlayerState target = players[targetIndex];
+            if (target.hp <= 0) {
+                continue;
+            }
+            if (isColliding(reinforcement.x, reinforcement.y, reinforcement.radius(), target.x, target.y, heroRadius)) {
+                target.hp = Math.max(0, target.hp - ENEMY_COLLISION_DAMAGE);
+                reinforcement.hp = 0;
+            }
+        }
+
+        pvpReinforcements.removeIf(r -> r.hp <= 0);
         playerBulletEntities.removeAll(consumed);
         enemyBulletEntities.clear();
         enemyEntities.clear();
@@ -304,6 +344,132 @@ final class NetworkHostBattleController {
             state.score = enemy.getScore();
             outEnemies.add(state);
         }
+
+        for (PvpReinforcement reinforcement : pvpReinforcements) {
+            if (reinforcement.hp <= 0) {
+                continue;
+            }
+            EnemyState state = new EnemyState();
+            state.x = reinforcement.x;
+            state.y = reinforcement.y;
+            state.vx = reinforcement.vx;
+            state.vy = reinforcement.vy;
+            state.hp = reinforcement.hp;
+            state.maxHp = REINFORCEMENT_HP;
+            state.boss = false;
+            state.kind = ENEMY_KIND_ELITE;
+            state.score = 0;
+            outEnemies.add(state);
+        }
+    }
+
+    private void maybeSummonPvpReinforcements(PlayerState[] players,
+                                              int worldWidth,
+                                              int worldHeight,
+                                              float heroHalfWidth,
+                                              float heroHalfHeight) {
+        for (int owner = 0; owner < players.length; owner++) {
+            if (reinforcementSummoned[owner]) {
+                continue;
+            }
+            if (players[owner].hp <= 0 || players[owner].hp > PVP_REINFORCEMENT_TRIGGER_HP) {
+                continue;
+            }
+            reinforcementSummoned[owner] = true;
+            spawnPvpReinforcement(owner, worldWidth, worldHeight, heroHalfWidth, heroHalfHeight, -72f);
+            spawnPvpReinforcement(owner, worldWidth, worldHeight, heroHalfWidth, heroHalfHeight, 72f);
+        }
+    }
+
+    private void spawnPvpReinforcement(int owner,
+                                       int worldWidth,
+                                       int worldHeight,
+                                       float heroHalfWidth,
+                                       float heroHalfHeight,
+                                       float xOffset) {
+        PvpReinforcement reinforcement = new PvpReinforcement();
+        reinforcement.owner = owner;
+        reinforcement.hp = REINFORCEMENT_HP;
+        reinforcement.x = clamp(worldWidth * 0.5f + xOffset, heroHalfWidth, worldWidth - heroHalfWidth);
+        reinforcement.y = owner == 0
+                ? worldHeight * 0.76f - heroHalfHeight
+                : worldHeight * 0.24f + heroHalfHeight;
+        reinforcement.vx = owner == 0 ? 1.8f : -1.8f;
+        reinforcement.vy = owner == 0 ? -PVP_REINFORCEMENT_SPEED_Y : PVP_REINFORCEMENT_SPEED_Y;
+        reinforcement.nextShootAt = elapsedMs + 280L;
+        pvpReinforcements.add(reinforcement);
+    }
+
+    private void movePvpReinforcements(int worldWidth, int worldHeight) {
+        for (PvpReinforcement reinforcement : pvpReinforcements) {
+            if (reinforcement.hp <= 0) {
+                continue;
+            }
+            reinforcement.x += reinforcement.vx;
+            reinforcement.y += reinforcement.vy;
+
+            float half = reinforcement.radius();
+            if (reinforcement.x < half || reinforcement.x > worldWidth - half) {
+                reinforcement.vx = -reinforcement.vx;
+                reinforcement.x = clamp(reinforcement.x, half, worldWidth - half);
+            }
+
+            if (reinforcement.owner == 0) {
+                float minY = worldHeight * 0.42f;
+                float maxY = worldHeight - half;
+                if (reinforcement.y < minY || reinforcement.y > maxY) {
+                    reinforcement.vy = -reinforcement.vy;
+                    reinforcement.y = clamp(reinforcement.y, minY, maxY);
+                }
+            } else {
+                float minY = half;
+                float maxY = worldHeight * 0.58f;
+                if (reinforcement.y < minY || reinforcement.y > maxY) {
+                    reinforcement.vy = -reinforcement.vy;
+                    reinforcement.y = clamp(reinforcement.y, minY, maxY);
+                }
+            }
+        }
+    }
+
+    private void shootPvpReinforcementBullets(float heroHalfHeight) {
+        for (PvpReinforcement reinforcement : pvpReinforcements) {
+            if (reinforcement.hp <= 0 || elapsedMs < reinforcement.nextShootAt) {
+                continue;
+            }
+
+            int bulletSpeedY = reinforcement.owner == 0 ? -16 : 16;
+            int bulletY = (int) (reinforcement.y + (reinforcement.owner == 0 ? -heroHalfHeight : heroHalfHeight));
+            BaseBullet bullet = new HeroBullet(
+                    (int) reinforcement.x,
+                    bulletY,
+                    0,
+                    bulletSpeedY,
+                    REINFORCEMENT_BULLET_DAMAGE
+            );
+            playerBulletEntities.add(bullet);
+            reinforcement.nextShootAt = elapsedMs + PVP_REINFORCEMENT_SHOOT_INTERVAL_MS;
+        }
+    }
+
+    private boolean damageOpposingReinforcementIfHit(BaseBullet bullet, int bulletOwner, float bulletRadius) {
+        for (PvpReinforcement reinforcement : pvpReinforcements) {
+            if (reinforcement.hp <= 0 || reinforcement.owner == bulletOwner) {
+                continue;
+            }
+            if (isColliding(
+                    bullet.getLocationX(),
+                    bullet.getLocationY(),
+                    bulletRadius,
+                    reinforcement.x,
+                    reinforcement.y,
+                    reinforcement.radius()
+            )) {
+                reinforcement.hp = Math.max(0, reinforcement.hp - bullet.getPower());
+                return true;
+            }
+        }
+        return false;
     }
 
     long getElapsedMs() {
@@ -373,5 +539,19 @@ final class NetworkHostBattleController {
         float dy = y1 - y2;
         float r = r1 + r2;
         return dx * dx + dy * dy <= r * r;
+    }
+
+    private static final class PvpReinforcement {
+        int owner;
+        float x;
+        float y;
+        float vx;
+        float vy;
+        int hp;
+        long nextShootAt;
+
+        float radius() {
+            return 24f;
+        }
     }
 }
