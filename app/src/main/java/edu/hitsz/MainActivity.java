@@ -21,7 +21,7 @@ import edu.hitsz.network.NetworkBattleActivity;
 
 public class MainActivity extends AppCompatActivity implements Game.GameStateListener {
 
-    private static final int DEFAULT_NETWORK_PORT = 24567;
+    private static final int DEFAULT_NETWORK_PORT = 24667;
     private static final String EMULATOR_HOST = "10.0.2.2";
 
     @Override

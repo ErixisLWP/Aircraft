@@ -27,7 +27,7 @@ public class NetworkBattleActivity extends AppCompatActivity {
         int mode = getIntent().getIntExtra(EXTRA_MODE, MODE_PVE);
         boolean hostRole = getIntent().getBooleanExtra(EXTRA_ROLE_HOST, true);
         String host = getIntent().getStringExtra(EXTRA_HOST);
-        int port = getIntent().getIntExtra(EXTRA_PORT, 24567);
+        int port = getIntent().getIntExtra(EXTRA_PORT, 24667);
         boolean emulatorMode = getIntent().getBooleanExtra(EXTRA_EMULATOR_MODE, false);
 
         NetworkBattleConfig.Mode battleMode = mode == MODE_PVP

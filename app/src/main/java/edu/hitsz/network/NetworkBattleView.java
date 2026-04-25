@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.os.SystemClock;
 import android.view.MotionEvent;
@@ -106,6 +107,9 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
 
     private volatile String statusText;
     private volatile String resultCode = RESULT_NONE;
+
+    private Bitmap cachedHeroSource;
+    private Bitmap cachedHeroFlipped;
 
     private long elapsedMs = 0L;
     private long nextStatePushAt = 0L;
@@ -650,21 +654,34 @@ public class NetworkBattleView extends SurfaceView implements SurfaceHolder.Call
                 paint = new Paint();
                 paint.setAlpha(110);
             }
+
             float left = player.x - hero.getWidth() / 2f;
             float top = player.y - hero.getHeight() / 2f;
-            if (!pve && i == 1) {
-                // In PVP, P2 should visually face downward.
-                canvas.save();
-                canvas.translate(0f, player.y * 2f);
-                canvas.scale(1f, -1f);
-                canvas.drawBitmap(hero, left, top, paint);
-                canvas.restore();
-            } else {
-                canvas.drawBitmap(hero, left, top, paint);
-            }
+            boolean faceDown = !pve && player.y < worldHeight * 0.5f;
+            Bitmap renderHero = faceDown ? getFlippedHero(hero) : hero;
+            canvas.drawBitmap(renderHero, left, top, paint);
+
             String label = i == 0 ? "P1" : "P2";
             canvas.drawText(label, player.x - playerLabelPaint.measureText(label) / 2f, player.y - hero.getHeight() / 2f - 8f, playerLabelPaint);
         }
+    }
+
+    private Bitmap getFlippedHero(Bitmap hero) {
+        if (hero == null) {
+            return null;
+        }
+        if (cachedHeroSource == hero && cachedHeroFlipped != null
+                && !cachedHeroFlipped.isRecycled()
+                && cachedHeroFlipped.getWidth() == hero.getWidth()
+                && cachedHeroFlipped.getHeight() == hero.getHeight()) {
+            return cachedHeroFlipped;
+        }
+
+        Matrix matrix = new Matrix();
+        matrix.preScale(1f, -1f);
+        cachedHeroFlipped = Bitmap.createBitmap(hero, 0, 0, hero.getWidth(), hero.getHeight(), matrix, false);
+        cachedHeroSource = hero;
+        return cachedHeroFlipped;
     }
 
     private void drawHealthBars(Canvas canvas) {

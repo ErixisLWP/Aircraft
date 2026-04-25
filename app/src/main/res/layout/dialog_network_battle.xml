@@ -94,6 +94,6 @@
         android:hint="@string/network_port_hint"
         android:inputType="number"
         android:maxLines="1"
-        android:text="24567" />
+        android:text="24667" />
 
 </LinearLayout>
